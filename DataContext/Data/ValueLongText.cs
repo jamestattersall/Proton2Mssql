@@ -1,0 +1,16 @@
+﻿using Microsoft.EntityFrameworkCore;
+using System;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations.Schema;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace ProtonConsole2.DataContext
+{
+    public partial class ValueLongText(int entityId, short attributeId, short seq) : Value(entityId, attributeId, seq)
+    {
+        [Column(TypeName = "varchar(max)")]
+        public string Value { get; set; } 
+    }
+}
