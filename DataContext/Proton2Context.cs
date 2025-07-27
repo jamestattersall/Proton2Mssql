@@ -65,8 +65,7 @@ public partial class Proton2Context : DbContext
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         => optionsBuilder.UseSqlServer(
-          // "Data Source=JET-ZB;Database=Proton8;Trusted_Connection=True;TrustServerCertificate=Yes;Connection Timeout=300"
-           Utilities.ConfigurationManager.AppSettings.SQLConnectionString()
+                  Utilities.ConfigurationManager.AppSettings.SQLConnectionString()
         );
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)

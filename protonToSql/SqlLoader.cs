@@ -54,7 +54,7 @@ namespace ProtonConsole2.ProtonToSql
             for (entityId = 1; entityId <= maxId; entityId++)
             {
                 Entity? entity = null;
-                if (patsts.MoveToPage(entityId) && (patsts.Updated > lastUpdateTime || entityId > maxEntityId || entityId < 300))
+                if (patsts.MoveToPage(entityId) && (patsts.Updated > lastUpdateTime || entityId > maxEntityId ))
                 {
                    entity = DataFunctions.GetEntityInstance(entityId);
                 }
