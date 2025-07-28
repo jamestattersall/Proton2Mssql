@@ -2,7 +2,6 @@
 using EFCore.BulkExtensions;
 using ProtonConsole2.DataContext;
 using ProtonConsole2.Proton;
-using ProtonConsole2.ProtonBinaryReaders;
 using ProtonConsole2.ProtonToSql;
 using ProtonConsole2.Utilities;
 using System.Text.Json;
@@ -17,7 +16,6 @@ return;
 var ited = MetaDataFunctions.GetViews();
 var options = new JsonSerializerOptions { WriteIndented = true, NumberHandling = System.Text.Json.Serialization.JsonNumberHandling.AllowNamedFloatingPointLiterals };
 var bulkConfig2 = new BulkConfig { SqlBulkCopyOptions = SqlBulkCopyOptions.KeepIdentity, IncludeGraph = true };
-
 
 ctx.BulkInsertOrUpdate(ited, bulkConfig2);
 

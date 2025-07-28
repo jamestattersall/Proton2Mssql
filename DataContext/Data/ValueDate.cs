@@ -7,7 +7,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 namespace ProtonConsole2.DataContext;
 
 [PrimaryKey(nameof(EntityId), nameof(AttributeId), nameof(Seq))]
-public abstract class Value(int entityId, short attributeId, short seq)
+public abstract class ValueBase(int entityId, short attributeId, short seq)
 {
     public int EntityId { get; set; } = entityId;
 
@@ -20,7 +20,7 @@ public abstract class Value(int entityId, short attributeId, short seq)
 }
 
 [Index(nameof(Value), AllDescending = true)]
-public partial class ValueDate(int entityId, short attributeId, short seq) : Value( entityId,  attributeId,  seq)
+public partial class ValueDate(int entityId, short attributeId, short seq) : ValueBase( entityId,  attributeId,  seq)
 {
     public DateOnly Value { get; set; }
 }

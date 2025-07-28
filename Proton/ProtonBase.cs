@@ -1,4 +1,4 @@
-﻿using ProtonConsole2.ProtonBinaryReaders;
+﻿using ProtonConsole2.Proton;
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -114,7 +114,7 @@ namespace ProtonConsole2.Proton
                 PageLength = pageLength;
             }
 
-            _fileStream = new FileStream(ProtonBase.ProtonFolderPath + "\\" + dbName, FileMode.Open, FileAccess.Read, FileShare.None, 1, false);
+            _fileStream = new FileStream(ProtonBase.ProtonFolderPath + "\\" + dbName, FileMode.Open, FileAccess.Read, FileShare.None, pageLength, false);
             FileLength = _fileStream.Length;
             NPages = (int)FileLength/PageLength;
             _pageBuffer = new byte[PageLength];

@@ -7,7 +7,7 @@ using NetTopologySuite.Geometries;
 using NetTopologySuite.Triangulate.Tri;
 using ProtonConsole2.DataContext;
 using ProtonConsole2.Proton;
-using ProtonConsole2.ProtonBinaryReaders;
+using ProtonConsole2.Proton;
 using ProtonConsole2.ProtonToSql;
 using ProtonConsole2.Utilities;
 using System;
@@ -98,18 +98,17 @@ namespace ProtonConsole2.ProtonToSql
         }
         public static void DbInsertFunction(List<Entity> entities, Proton2Context ctx)
         {
-            ctx.BulkInsertOptimized(entities, o =>
+            ctx.BulkInsert(entities, o =>
             {
                 o.IncludeGraph = true;
-                o.InsertKeepIdentity = true;
-                o.DisableValueGenerated = true;
+                o.SqlBulkCopyOptions = SqlBulkCopyOptions.KeepIdentity;
             });
 
         }
         public static void DbSyncFunction(List<Entity> entities, Proton2Context ctx)
         {
             var es = (from e in entities
-                     select e.EntityId).ToArray();
+                      select e.EntityId).ToArray();
             ctx.ValueTexts.Where(e => es.Contains(e.EntityId)).ExecuteDelete();
             ctx.ValueNumbers.Where(e => es.Contains(e.EntityId)).ExecuteDelete();
             ctx.ValueLookups.Where(e => es.Contains(e.EntityId)).ExecuteDelete();
@@ -119,18 +118,15 @@ namespace ProtonConsole2.ProtonToSql
             ctx.ValueEntities.Where(e => es.Contains(e.EntityId)).ExecuteDelete();
             ctx.Entities.Where(e => es.Contains(e.EntityId)).ExecuteDelete();
 
-            ctx.BulkInsertOptimized(entities, o =>
+            ctx.BulkInsert(entities, o =>
             {
                 o.IncludeGraph = true;
-                o.InsertKeepIdentity = true;
-                o.DisableValueGenerated = true;
-
+                o.SqlBulkCopyOptions=SqlBulkCopyOptions.KeepIdentity;
             });
 
 
         }
         
-
         public static void LoadIndexes(int nItemsBuffer=100)
         {
             Console.WriteLine("");
@@ -138,7 +134,7 @@ namespace ProtonConsole2.ProtonToSql
 
             Progress.WriteProgress(0);
             using Proton2Context ctx = new();
-            var bulkConfig = new BulkConfig { PreserveInsertOrder = true, SqlBulkCopyOptions = SqlBulkCopyOptions.KeepIdentity   };
+            var bulkConfig = new BulkConfig { PreserveInsertOrder = true, SqlBulkCopyOptions = SqlBulkCopyOptions.KeepIdentity, ReplaceReadEntities = true };
             var bulkConfig2 = new BulkConfig { SqlBulkCopyOptions = SqlBulkCopyOptions.KeepIdentity & SqlBulkCopyOptions.CheckConstraints, IncludeGraph = true };
 
             List<DataContext.Index> list = [];
@@ -151,7 +147,8 @@ namespace ProtonConsole2.ProtonToSql
             index.PageCounterReset();
             var dataExists = ctx.Indexes.Any();
             ctx.Database.ExecuteSql($"ALTER TABLE Indexes NOCHECK CONSTRAINT FK_Indexes_Entities_EntityId");
-
+            var sw = new Stopwatch();
+            sw.Start();
             for (short indexTypeId = 1; indexTypeId <= indexDef.NPages; indexTypeId++)
             {
                 if (indexDef.MoveToPage(indexTypeId))
@@ -165,12 +162,13 @@ namespace ProtonConsole2.ProtonToSql
                             string key = index.KeyText.Trim();
                             if (!key.IsNullOrEmpty())
                             {
-                                list.Add(new()
+                                list.Add( new()
                                 {
                                     Term = key,
                                     IndexTypeId =  index.IndexDefId,
                                     EntityId = index.EntityId
-                                });
+                                }); 
+                               
                                 if(index.IndexId != currentPageId)
                                 {
                                     currentPageId = index.IndexId;
@@ -179,12 +177,8 @@ namespace ProtonConsole2.ProtonToSql
                             } 
                             if (bufferCount > nItemsBuffer)
                             {
-                                if (dataExists)
-                                {
-                                    ctx.Indexes.BulkInsertOptimized(list, o => { o.SqlBulkCopyOptions= (int?)SqlBulkCopyOptions.KeepIdentity; o.InsertIfNotExists = true; o.InsertKeepIdentity = true; o.AllowDuplicateKeys = true; } );
-                                }else {
-                                    ctx.Indexes.BulkInsertOptimized(list, o => { o.SqlBulkCopyOptions = (int?)SqlBulkCopyOptions.KeepIdentity; o.InsertIfNotExists = true; o.InsertKeepIdentity = true; o.AllowDuplicateKeys = true; });
-                                }
+                                //fails if there are duplicates in the list
+                                ctx.BulkInsertOrUpdate(list.Distinct(), bulkConfig );
 
                                 progress.WriteProgressBar( index.PageCounter, totalPages);
                                 list = [];
@@ -196,16 +190,12 @@ namespace ProtonConsole2.ProtonToSql
              
             }
 
-            if (dataExists)
-            {
-                ctx.Indexes.BulkInsertOptimized(list, o => { o.SqlBulkCopyOptions = (int?)SqlBulkCopyOptions.KeepIdentity; o.InsertIfNotExists = true; o.InsertKeepIdentity = true; o.AllowDuplicateKeys = true; });
-            }
-            else
-            {
-                ctx.BulkInsertOrUpdate(list, bulkConfig);
-            }
+            ctx.BulkInsertOrUpdate(list.Distinct(), bulkConfig);
+
             progress.WriteProgressBar((float)1);
             Console.WriteLine();
+            sw.Stop();
+            Console.WriteLine((sw.ElapsedMilliseconds / 1000).ToString() + "sec.");
         }
 
         public static void UpdateEntityNames()

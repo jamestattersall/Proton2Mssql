@@ -66,8 +66,9 @@ public partial class Proton2Context : DbContext
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         => optionsBuilder.UseSqlServer(
                   Utilities.ConfigurationManager.AppSettings.SQLConnectionString()
-        );
-
+            )
+            .UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
+        
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         foreach (var relationship in modelBuilder.Model.GetEntityTypes().SelectMany(e => e.GetForeignKeys()))

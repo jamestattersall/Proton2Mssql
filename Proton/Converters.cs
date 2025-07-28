@@ -3,7 +3,7 @@
 namespace ProtonConsole2.Proton
 {
 
-    public class BigEndianIntegerPrimitive : ProtonBinaryReaders.IPrimativeIntConverter
+    public class BigEndianIntegerPrimitive : Proton.IPrimativeIntConverter
     {
         public bool IsBigEndian => true;
 
@@ -16,7 +16,7 @@ namespace ProtonConsole2.Proton
         public UInt32 UInt32Converter(ReadOnlyMemory<byte> memory) => BinaryPrimitives.ReadUInt32BigEndian(memory.Span);
     }
 
-    public class LittleEndianIntegerPrimitive : ProtonBinaryReaders.IPrimativeIntConverter
+    public class LittleEndianIntegerPrimitive : Proton.IPrimativeIntConverter
     {
         public bool IsBigEndian => false;
 
@@ -29,34 +29,34 @@ namespace ProtonConsole2.Proton
         public UInt32 UInt32Converter(ReadOnlyMemory<byte> memory) => BinaryPrimitives.ReadUInt32LittleEndian(memory.Span);
     }
 
-    public class BigEndianFloatPrimative : ProtonBinaryReaders.IPrimativeFloatConverter
+    public class BigEndianFloatPrimative : Proton.IPrimativeFloatConverter
     {
-        bool ProtonBinaryReaders.IPrimativeFloatConverter.IsBigEndian => true;
+        bool Proton.IPrimativeFloatConverter.IsBigEndian => true;
 
-        float ProtonBinaryReaders.IPrimativeFloatConverter.DoubleConverter(ReadOnlyMemory<byte> memory) {
+        float Proton.IPrimativeFloatConverter.DoubleConverter(ReadOnlyMemory<byte> memory) {
             float res = (float)BinaryPrimitives.ReadDoubleBigEndian(memory.Span);
             return float.IsRealNumber(res) ? res : 0;
         }
 
-        float ProtonBinaryReaders.IPrimativeFloatConverter.SingleConverter(ReadOnlyMemory<byte> memory)
+        float Proton.IPrimativeFloatConverter.SingleConverter(ReadOnlyMemory<byte> memory)
         {
             float res = BinaryPrimitives.ReadSingleBigEndian(memory.Span);
             return float.IsRealNumber(res) ? res : 0;
         }
     }
 
-    public class LittleEndianFloatPrimative : ProtonBinaryReaders.IPrimativeFloatConverter
+    public class LittleEndianFloatPrimative : Proton.IPrimativeFloatConverter
     {
-        bool ProtonBinaryReaders.IPrimativeFloatConverter.IsBigEndian => true;
+        bool Proton.IPrimativeFloatConverter.IsBigEndian => true;
 
-        float ProtonBinaryReaders.IPrimativeFloatConverter.DoubleConverter(ReadOnlyMemory<byte> memory)
+        float Proton.IPrimativeFloatConverter.DoubleConverter(ReadOnlyMemory<byte> memory)
         {
             float res = (float)BinaryPrimitives.ReadDoubleLittleEndian(memory.Span);
             return float.IsRealNumber(res) ? res : 0;
          
         }
 
-        float ProtonBinaryReaders.IPrimativeFloatConverter.SingleConverter(ReadOnlyMemory<byte> memory)
+        float Proton.IPrimativeFloatConverter.SingleConverter(ReadOnlyMemory<byte> memory)
         {
             float res = BinaryPrimitives.ReadSingleLittleEndian(memory.Span);
             return float.IsRealNumber(res) ? res : 0 ;

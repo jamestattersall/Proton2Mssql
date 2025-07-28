@@ -14,7 +14,7 @@ using System.Threading.Tasks;
 using System.Xml.Linq;
 using System.Xml.Serialization;
 
-namespace ProtonConsole2.ProtonBinaryReaders
+namespace ProtonConsole2.Proton
 {
 
     internal class DataFunctions

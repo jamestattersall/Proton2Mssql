@@ -1,5 +1,5 @@
 ﻿using ProtonConsole2.DataContext;
-using ProtonConsole2.ProtonBinaryReaders;
+using ProtonConsole2.Proton;
 using System;
 using System.Collections.Generic;
 using System.Linq;

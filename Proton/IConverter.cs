@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace ProtonConsole2.ProtonBinaryReaders
+namespace ProtonConsole2.Proton
 {
     public interface IPrimativeIntConverter
     {

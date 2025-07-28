@@ -15,7 +15,7 @@ using System.Runtime.CompilerServices;
 using System.Threading.Tasks.Dataflow;
 using System.Transactions;
 
-namespace ProtonConsole2.ProtonBinaryReaders
+namespace ProtonConsole2.Proton
 {
     public class MetaDataFunctions
     {
