@@ -8,7 +8,7 @@ namespace ProtonConsole2.DataContext;
 public partial class Lookup
 {
     [Key, DatabaseGenerated(DatabaseGeneratedOption.None)]
-    public int LookupId { get; set; }
+    public int Id { get; set; }
 
     public short LookupTypeId { get; set; }
 

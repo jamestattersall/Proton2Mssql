@@ -8,7 +8,7 @@ namespace ProtonConsole2.DataContext;
 public partial class IndexType 
 {
     [Key, DatabaseGenerated(DatabaseGeneratedOption.None)]
-    public short IndexTypeId { get; set; } 
+    public short Id { get; set; } 
 
     public short EntityTypeId { get; set; }
 
@@ -20,7 +20,7 @@ public partial class IndexType
     public short IdLineViewId { get; set; }
 
     [NotMapped]
-    public short KeyLength { get; set; }   //required to read Index.dbs , not for SQ
+    public short KeyLength { get; set; }   //required to read Index.dbs , not for SQL
 
     [NotMapped]
     public int StartIndexId { get; set; } // "

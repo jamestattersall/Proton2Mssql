@@ -8,7 +8,7 @@ namespace ProtonConsole2.DataContext;
 public class Attribute
 {
     [Key, DatabaseGenerated(DatabaseGeneratedOption.None)]
-    public short AttributeId { get; set; }
+    public short Id { get; set; }
 
     public short DataTypeId { get; set; }
 

@@ -29,7 +29,7 @@ namespace ProtonConsole2.Proton
                 {
                     list.Add(new()
                     {
-                        EntityTypeId = ix,
+                        Id = ix,
                         Name = entityDef.Name,
                         KeyIndexTypeId = entityDef.KeyIndexDefId,
                         IdLineViewId = entityDef.IdGroup,
@@ -48,39 +48,39 @@ namespace ProtonConsole2.Proton
             string jsonData = $$"""
                 [
                     {
-                        "DataTypeId": {{(short)DataTypes.Text}},
+                        "Id": {{(short)DataTypes.Text}},
                         "Name": "{{DataTypes.Text}}",
                         "ValueTable": "{{nameof(Proton2Context.ValueTexts)}}"
                     },    {
-                        "DataTypeId": {{(short)DataTypes.numeric}},
+                        "Id": {{(short)DataTypes.numeric}},
                         "Name": "{{DataTypes.numeric}}",
                         "ValueTable": "{{nameof(Proton2Context.ValueNumbers)}}"
                     },    {
-                        "DataTypeId": {{(short)DataTypes.Lookup}},
+                        "Id": {{(short)DataTypes.Lookup}},
                         "Name": "{{DataTypes.Lookup}}",
                         "ValueTable": "{{nameof(Proton2Context.ValueLookups)}}",
                         "LookupTable": "{{nameof(Proton2Context.Lookups)}}"
                       },    {
-                        "DataTypeId": {{(short)DataTypes.EntityPtr}},
+                        "Id": {{(short)DataTypes.EntityPtr}},
                         "Name": "{{DataTypes.EntityPtr}}",
                         "ValueTable": "{{nameof(Proton2Context.ValueEntities)}}",
                         "LookupTable": "{{nameof(Proton2Context.Entities)}}",                
                         "AltValueTable": "{{nameof(Proton2Context.ValueTexts)}}"
                     },    {
-                        "DataTypeId": {{(short)DataTypes.LongText}},
+                        "Id": {{(short)DataTypes.LongText}},
                         "Name": "{{DataTypes.LongText}}",
                         "ValueTable": "{{nameof(Proton2Context.ValueLongTexts)}}"
                     },  {
-                        "DataTypeId": {{(short)DataTypes.Date}},
+                        "Id": {{(short)DataTypes.Date}},
                         "Name": "{{DataTypes.Date}}",
                         "ValueTable": "{{nameof(Proton2Context.ValueDates)}}"
                     }, {
-                        "DataTypeId": {{(short)DataTypes.Time}},
+                        "Id": {{(short)DataTypes.Time}},
                         "Name": "{{DataTypes.Time}}",
                         "ValueTable": "{{nameof(Proton2Context.ValueTimes)}}",
                         "AltValueTable": "{{nameof(Proton2Context.ValueTexts)}}"
                     }, {
-                        "DataTypeId": {{(short)DataTypes.QualifiedNumbers}},
+                        "Id": {{(short)DataTypes.QualifiedNumbers}},
                         "Name": "{{DataTypes.QualifiedNumbers}}",
                         "ValueTable": "{{nameof(Proton2Context.ValueNumbers)}}",
                         "AltValueTable": "{{nameof(Proton2Context.ValueLookups)}}",
@@ -107,7 +107,7 @@ namespace ProtonConsole2.Proton
                     {
                         list.Add(new()
                         {
-                            UserStarterId = ix,
+                            Id = ix,
                             UserCode = passwd.EncryptedPassword,
                             UserName = passwd.username,
                             MenuId = passwd.FunctionParameter,
@@ -142,7 +142,7 @@ namespace ProtonConsole2.Proton
                     {
                         tbl = new()
                         {
-                            TableId = tableId,
+                            Id = tableId,
                             Name = itm.Name,
                             EntityTypeId = itm.EntityTypeId,
                             DateAttributeId = itm.DateItemId,
@@ -175,7 +175,7 @@ namespace ProtonConsole2.Proton
                     }
                     DataContext.Attribute attr = new()
                     {
-                        AttributeId = (short)itm.ItemId,
+                        Id = (short)itm.ItemId,
                         EntityTypeId = itm.EntityTypeId,
                         TableId = tableId,
                         DisplayLength = itm.DisplayLength,
@@ -248,7 +248,7 @@ namespace ProtonConsole2.Proton
             {
                 if (menu.MoveToPage(i))
                 {
-                    DataContext.Menu mnu = new() { MenuId = i, Name = menu.Name };
+                    DataContext.Menu mnu = new() { Id = i, Name = menu.Name };
                     byte c = 0;
                     while (menu.MoveToNextBlock())
                     {
@@ -316,7 +316,7 @@ namespace ProtonConsole2.Proton
 
             using (Proton.CodeDef cd = new())
             {
-                codes.Add(new() { LookupTypeId = 0, Name = "Proton DICT code" });
+                codes.Add(new() { Id = 0, Name = "Proton DICT code" });
                 for (short ix = 1; ix <= cd.NPages; ix++)
                 {
                     if (cd.MoveToPage(ix))
@@ -324,7 +324,7 @@ namespace ProtonConsole2.Proton
                         var ct = cd.CodeDefId;
                         if (ct > 0)
                         {
-                            codes.Add(new() { LookupTypeId = ix, Name = cd.Name });
+                            codes.Add(new() { Id = ix, Name = cd.Name });
                         }
                     }
                 }
@@ -349,7 +349,7 @@ namespace ProtonConsole2.Proton
                     {
                         var ct = rcode.CodeTypeID;
 
-                        codes.Add(new() { LookupId = ix, Name = rcode.Name, LookupTypeId = rcode.CodeTypeID, Code = rcode.ReadCode });
+                        codes.Add(new() { Id = ix, Name = rcode.Name, LookupTypeId = rcode.CodeTypeID, Code = rcode.ReadCode });
 
                     }
                 }
@@ -360,7 +360,7 @@ namespace ProtonConsole2.Proton
                 {
                     if (dict.MoveToPage(ix))
                     {
-                        codes.Add(new() { LookupId = -ix, Name = dict.Name, LookupTypeId = 0 });
+                        codes.Add(new() { Id = -ix, Name = dict.Name, LookupTypeId = 0 });
                     }
                 }
             }
@@ -385,7 +385,7 @@ namespace ProtonConsole2.Proton
                 {
                     var scrObj = new View()
                     {
-                        ViewId = ix,
+                        Id = ix,
                         Name = scrn.Name,
                         TableId = itm.GroupId == 0 ? (short)-itm.EntityTypeId: itm.GroupId,
                         EntityTypeId = itm.EntityTypeId,

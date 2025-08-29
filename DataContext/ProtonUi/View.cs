@@ -8,7 +8,7 @@ namespace ProtonConsole2.DataContext;
 public partial class View
 {
     [Key, DatabaseGenerated(DatabaseGeneratedOption.None)]
-    public short ViewId { get; set; }
+    public short Id { get; set; }
 
     [Column(TypeName = "varchar(255)")]
     public string Name { get; set; } 

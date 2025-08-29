@@ -8,7 +8,7 @@ namespace ProtonConsole2.DataContext;
 public partial class Table
 {
     [Key, DatabaseGenerated(DatabaseGeneratedOption.None)]
-    public short TableId { get; set; } 
+    public short Id { get; set; } 
 
     public short EntityTypeId { get; set; }
 

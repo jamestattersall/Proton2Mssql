@@ -8,7 +8,7 @@ namespace ProtonConsole2.DataContext;
 public partial class UserStarter
 {
     [Key, DatabaseGenerated(DatabaseGeneratedOption.None)]
-    public short UserStarterId { get; set; }
+    public short Id { get; set; }
 
     [Column(TypeName = "varchar(255)")]
     public string UserCode { get; set; }

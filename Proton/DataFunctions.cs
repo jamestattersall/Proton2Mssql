@@ -148,7 +148,7 @@ namespace ProtonConsole2.Proton
                 ValueIndex valueIndex = new() { EntityId = entityId };
                 entity = new()
                 {
-                    EntityId = entityId,
+                    Id = entityId,
                 };
                 
                 var start = vrx.FirstDataPageId;
@@ -364,7 +364,7 @@ namespace ProtonConsole2.Proton
             var id = ProtonDbFileReader.GetInt32(GetMemory(data, 4));
             if (id > 0 && frText.MoveToPage(id))
             {
-                if (frText.EntityId == ent.EntityId)
+                if (frText.EntityId == ent.Id)
                 {
                     ent.ValueLongTexts.Add(new(valueIndex.EntityId, valueIndex.AttributeId, valueIndex.Seq)
                     {

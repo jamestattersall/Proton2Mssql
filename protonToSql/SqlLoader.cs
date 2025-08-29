@@ -19,6 +19,42 @@ using System.Text;
 using System.Threading.Tasks;
 namespace ProtonConsole2.ProtonToSql
 {
+    class IndexComparer : IEqualityComparer<DataContext.Index>
+    {
+        public bool Equals(DataContext.Index x, DataContext.Index y)
+        {
+
+            if (Object.ReferenceEquals(x, y)) return true;
+
+            if (Object.ReferenceEquals(x, null) || Object.ReferenceEquals(y, null))
+                return false;
+
+            return x.IndexTypeId == y.IndexTypeId && x.Term == y.Term && x.EntityId==y.EntityId;
+        }
+
+        // If Equals() returns true for a pair of objects
+        // then GetHashCode() must return the same value for these objects.
+
+        public int GetHashCode(DataContext.Index index)
+        {
+            //Check whether the object is null
+            if (Object.ReferenceEquals(index, null)) return 0;
+
+            //Get hash code for the Name field if it is not null.
+            int hashTerm = index.Term == null ? 0 : index.Term.GetHashCode();
+
+            //Get hash code for the Code field.
+            int hashIndexType = index.IndexTypeId.GetHashCode();
+
+
+            //Get hash code for the Code field.
+            int hashEntityId = index.EntityId.GetHashCode();
+
+            //Calculate the hash code for the product.
+            return hashTerm ^ hashIndexType ^ hashEntityId;
+        }
+    }
+
     internal class SqlLoader()
     {
 
@@ -48,7 +84,7 @@ namespace ProtonConsole2.ProtonToSql
             if (hasData && incremental)
             {
                 lastUpdateTime = ctx.Entities.Max(e => e.LastUpdated);
-                maxEntityId = ctx.Entities.Max(e => e.EntityId);
+                maxEntityId = ctx.Entities.Max(e => e.Id);
             }
 
             for (entityId = 1; entityId <= maxId; entityId++)
@@ -108,7 +144,7 @@ namespace ProtonConsole2.ProtonToSql
         public static void DbSyncFunction(List<Entity> entities, Proton2Context ctx)
         {
             var es = (from e in entities
-                      select e.EntityId).ToArray();
+                      select e.Id).ToArray();
             ctx.ValueTexts.Where(e => es.Contains(e.EntityId)).ExecuteDelete();
             ctx.ValueNumbers.Where(e => es.Contains(e.EntityId)).ExecuteDelete();
             ctx.ValueLookups.Where(e => es.Contains(e.EntityId)).ExecuteDelete();
@@ -116,7 +152,7 @@ namespace ProtonConsole2.ProtonToSql
             ctx.ValueDates.Where(e => es.Contains(e.EntityId)).ExecuteDelete();
             ctx.ValueTimes.Where(e => es.Contains(e.EntityId)).ExecuteDelete();
             ctx.ValueEntities.Where(e => es.Contains(e.EntityId)).ExecuteDelete();
-            ctx.Entities.Where(e => es.Contains(e.EntityId)).ExecuteDelete();
+            ctx.Entities.Where(e => es.Contains(e.Id)).ExecuteDelete();
 
             ctx.BulkInsert(entities, o =>
             {
@@ -129,6 +165,8 @@ namespace ProtonConsole2.ProtonToSql
         
         public static void LoadIndexes(int nItemsBuffer=100)
         {
+            
+
             Console.WriteLine("");
             Console.WriteLine("Loading indexes");
 
@@ -164,7 +202,7 @@ namespace ProtonConsole2.ProtonToSql
                             {
                                 list.Add( new()
                                 {
-                                    Term = key,
+                                    Term = key.Trim(),
                                     IndexTypeId =  index.IndexDefId,
                                     EntityId = index.EntityId
                                 }); 
@@ -178,7 +216,8 @@ namespace ProtonConsole2.ProtonToSql
                             if (bufferCount > nItemsBuffer)
                             {
                                 //fails if there are duplicates in the list
-                                ctx.BulkInsertOrUpdate(list.Distinct(), bulkConfig );
+
+                                ctx.BulkInsertOrUpdate(list.Distinct(new IndexComparer()), bulkConfig );
 
                                 progress.WriteProgressBar( index.PageCounter, totalPages);
                                 list = [];
@@ -264,11 +303,11 @@ INNER JOIN Entities e ON e.EntityId=i.EntityId";
 
             if (ctx.Views.Any())
             {
-                ctx.BulkInsertOrUpdate(MetaDataFunctions.GetViews(), bulkConfig);
+                ctx.BulkInsertOrUpdate(MetaDataFunctions.GetViews(), bulkConfig2);
             }
             else
             {
-                ctx.BulkInsert(MetaDataFunctions.GetViews(), bulkConfig);
+                ctx.BulkInsert(MetaDataFunctions.GetViews(), bulkConfig2);
             }
             progress.WriteProgressBar(c / (float)9); c++; 
 
@@ -296,18 +335,13 @@ INNER JOIN Entities e ON e.EntityId=i.EntityId";
 
             if (ctx.Menus.Any())
             {
-                ctx.BulkInsertOrUpdate(MetaDataFunctions.GetMenus(), bulkConfig);
+                ctx.BulkInsertOrUpdate(MetaDataFunctions.GetMenus(), bulkConfig2);
             }
             else
             {
-                ctx.BulkInsert(MetaDataFunctions.GetMenus(), bulkConfig);
+                ctx.BulkInsert(MetaDataFunctions.GetMenus(), bulkConfig2);
             }
             progress.WriteProgressBar(c / (float)9); c++;
-
-
-            ctx.BulkInsertOrUpdate(MetaDataFunctions.GetMenus(), bulkConfig2);
-            progress.WriteProgressBar(c / (float)9); c++;
-
 
             if (ctx.UserStarters.Any())
             {

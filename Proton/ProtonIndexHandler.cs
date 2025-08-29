@@ -22,7 +22,7 @@ namespace ProtonConsole2.ProtonToSql
                 {
                     _entityTypes.Add(i, new() 
                     {
-                         EntityTypeId = i,
+                         Id = i,
                          Name= entityDef.Name,
                          DefaultIndexTypeId= entityDef.DefaultIndexDefId,
                          KeyIndexTypeId = entityDef.KeyIndexDefId,
@@ -69,7 +69,7 @@ namespace ProtonConsole2.ProtonToSql
                             {
                                 _indexTypes.Add(ii, new()
                                 {
-                                    IndexTypeId = ii,
+                                    Id = ii,
                                     Name = keyDef.Name,
                                     EntityTypeId =  keyDef.EntityTypeId,
                                     MiddleIndexId = indexDef.IndexIdMiddle,
@@ -112,7 +112,7 @@ namespace ProtonConsole2.ProtonToSql
         {
             if (_index.MoveToPage(startIndexId))
             {
-                if (_index.IndexDefId != _indexType.IndexTypeId) throw new InvalidDataException("Missmatch index types");
+                if (_index.IndexDefId != _indexType.Id) throw new InvalidDataException("Missmatch index types");
             }
             else throw new InvalidDataException("invalid startIndexId: " + startIndexId.ToString());
         }
@@ -193,13 +193,13 @@ namespace ProtonConsole2.ProtonToSql
             var keyItems = new List<DataContext.Index>();
             while (c < nItems && _index.MoveToNextBlock())
             {
-                if (_index.IndexDefId == _indexType.IndexTypeId)
+                if (_index.IndexDefId == _indexType.Id)
                 {
                     keyItems.Add(new DataContext.Index()
                     {
                         EntityId = _index.EntityId,
                         Term = _index.KeyText,
-                        IndexTypeId = _indexType.IndexTypeId
+                        IndexTypeId = _indexType.Id
                     });
 
                     c++;

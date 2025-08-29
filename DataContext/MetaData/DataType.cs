@@ -11,7 +11,7 @@ namespace ProtonConsole2.DataContext
     public class DataType() 
     {
         [Key, DatabaseGenerated(DatabaseGeneratedOption.None)]
-        public short DataTypeId { get; set; }
+        public short Id { get; set; }
 
         [Column(TypeName = "varchar(255)")]
         public string Name { get; set; } 

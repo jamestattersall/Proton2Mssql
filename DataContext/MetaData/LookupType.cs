@@ -11,7 +11,7 @@ namespace ProtonConsole2.DataContext
     public partial class LookupType
     {
         [Key, DatabaseGenerated(DatabaseGeneratedOption.None)]
-        public short LookupTypeId { get; set; }
+        public short Id { get; set; }
 
         [Column(TypeName = "varchar(255)")]
         public required string Name { get; set; }
