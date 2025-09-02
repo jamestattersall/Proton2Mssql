@@ -7,11 +7,10 @@ using ProtonConsole2.Utilities;
 using System.Text.Json;
 
 
-var ctx = new Proton2Context();
-var cfg = new ProtonBase(ConfigurationManager.AppSettings.PathToProtonFolder);
 Questioner.HomeEdit();
 return;
 
+var ctx = new Proton2Context();
 //code below for debugging;
 var ited = MetaDataFunctions.GetViews();
 var options = new JsonSerializerOptions { WriteIndented = true, NumberHandling = System.Text.Json.Serialization.JsonNumberHandling.AllowNamedFloatingPointLiterals };

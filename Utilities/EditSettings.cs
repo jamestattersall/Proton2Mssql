@@ -8,7 +8,6 @@ using System.Net.NetworkInformation;
 using System.Configuration;
 using ProtonConsole2.DataContext;
 using ProtonConsole2.Proton;
-using ProtonConsole2.Proton;
 
 namespace ProtonConsole2.Utilities
 {
@@ -64,8 +63,11 @@ namespace ProtonConsole2.Utilities
                         Questioner.EditSettings();
                         break;
                     case 2:
-                        ProtonToSql.SqlLoader.LoadMetadata();
-                        ProtonToSql.SqlLoader.LoadIndexes();
+                        if (ConfigurationManager.AppSettings.TestConnection())
+                        {
+                            ProtonToSql.SqlLoader.LoadMetadata();
+                            ProtonToSql.SqlLoader.LoadIndexes();
+                        }
                         break;
                     case 3:
                         ProtonToSql.SqlLoader.LoadEntityInstances(200); 
@@ -78,12 +80,14 @@ namespace ProtonConsole2.Utilities
         }
        public static void EditSettings() 
        {
+            var apsettings = ConfigurationManager.AppSettings;
+            
             Console.Clear();
-            Console.WriteLine("[1] SQL Db Server:");
-            Console.WriteLine("[2] DB name:");
-            Console.WriteLine("[3] DB integrated security:");
+            Console.WriteLine("[1] SQL Db Server:" + apsettings.Server);
+            Console.WriteLine("[2] DB name:" + apsettings.DBname);
+            Console.WriteLine("[3] DB integrated security:" + apsettings.DBIsIntegrated.ToString());
             Console.WriteLine("[4] DB Password:");
-            Console.WriteLine("[5] Proton.dbs files directory:");
+            Console.WriteLine("[5] Proton.dbs files directory:" + apsettings.PathToProtonFolder);
             Console.WriteLine("[0] Exit");
             int? opt = null;
             while (opt != 0)

@@ -90,7 +90,7 @@ namespace ProtonConsole2.Proton
                 ]
                 """;
 
-            return System.Text.Json.JsonSerializer.Deserialize<List<DataContext.DataType>>(jsonData);
+            return System.Text.Json.JsonSerializer.Deserialize<List<DataContext.DataType>>(jsonData)!;
         }
 
         public static List<UserStarter> GetUserStarters()
@@ -252,7 +252,7 @@ namespace ProtonConsole2.Proton
                     byte c = 0;
                     while (menu.MoveToNextBlock())
                     {
-                        mnu.Items.Add(new()
+                        mnu.MenuItems.Add(new()
                         {
                             MenuId = i,
                             Seq = c,

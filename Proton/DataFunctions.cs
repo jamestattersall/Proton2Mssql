@@ -5,14 +5,7 @@ using NetTopologySuite.Utilities;
 using ProtonConsole2.DataContext;
 using ProtonConsole2.Proton;
 using ProtonConsole2.ProtonToSql;
-using System;
-using System.Buffers.Binary;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Xml.Linq;
-using System.Xml.Serialization;
+using ProtonConsole2.Utilities;
 
 namespace ProtonConsole2.Proton
 {
@@ -138,9 +131,9 @@ namespace ProtonConsole2.Proton
             return m;
         }
 
+        public static Entity? GetEntityInstance(int entityId) {
+   
 
-
-        public static Entity? GetEntityInstance(int entityId) { 
             Entity? entity = null;
 
             if (vrx.MoveToPage(entityId))
@@ -397,7 +390,7 @@ namespace ProtonConsole2.Proton
             }
         }
 
-        public static CompositeFloat GetCompositeSingle(ReadOnlyMemory<byte> data)
+        private static CompositeFloat GetCompositeSingle(ReadOnlyMemory<byte> data)
         {
             CompositeFloat cf = new();
             if (data.Length >8)
@@ -417,7 +410,7 @@ namespace ProtonConsole2.Proton
              return cf;  
         }
 
-        public static CompositeFloat GetCompositeDouble(ReadOnlyMemory<byte> data)
+        private static CompositeFloat GetCompositeDouble(ReadOnlyMemory<byte> data)
         {
             CompositeFloat cf = new();
             if (data.Length > 12)
@@ -436,7 +429,7 @@ namespace ProtonConsole2.Proton
             return cf;
         }
 
-        public static CompositeTime GetCompositeTime(ReadOnlyMemory<byte> data)
+        private static CompositeTime GetCompositeTime(ReadOnlyMemory<byte> data)
         {
             var timeOffset = ProtonDbFileReader.GetUInt32(GetMemory(data,4));
            

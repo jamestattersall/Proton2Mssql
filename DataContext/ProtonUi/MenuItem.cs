@@ -19,6 +19,7 @@ namespace ProtonConsole2.DataContext.ProtonUi
 
         [Column(TypeName = "varchar(255)")]
         public string Function { get; set; }
+
         public short NextMenuId { get; set; }
         public short StartMenuId { get; set; }
         public short Parameter1 { get; set; }

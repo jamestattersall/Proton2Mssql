@@ -1,22 +1,10 @@
 ﻿using EFCore.BulkExtensions;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Metadata.Internal;
-using Microsoft.EntityFrameworkCore.Query.SqlExpressions;
 using Microsoft.IdentityModel.Tokens;
-using NetTopologySuite.Geometries;
-using NetTopologySuite.Triangulate.Tri;
 using ProtonConsole2.DataContext;
 using ProtonConsole2.Proton;
-using ProtonConsole2.Proton;
-using ProtonConsole2.ProtonToSql;
 using ProtonConsole2.Utilities;
-using System;
-using System.Collections.Generic;
-using System.ComponentModel.Design.Serialization;
 using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 namespace ProtonConsole2.ProtonToSql
 {
     class IndexComparer : IEqualityComparer<DataContext.Index>
@@ -60,6 +48,11 @@ namespace ProtonConsole2.ProtonToSql
 
         public static void LoadEntityInstances(int batchNPages, bool incremental=true)
         {
+            if (!ConfigurationManager.AppSettings.TestConnection())
+            {
+                return;
+            }
+
             int maxId = DataFunctions.NEntities;
             long totalPages = DataFunctions.NDataPages;
             var conu = new Progress(20);
@@ -165,7 +158,10 @@ namespace ProtonConsole2.ProtonToSql
         
         public static void LoadIndexes(int nItemsBuffer=100)
         {
-            
+            if (!ConfigurationManager.AppSettings.TestConnection())
+            {
+                return;
+            }
 
             Console.WriteLine("");
             Console.WriteLine("Loading indexes");
@@ -244,8 +240,8 @@ UPDATE Entities
 SET Name=i.Term, EntityTypeId=a.EntityTypeId
 FROM Attributes a
 INNER JOIN EntityTypes et on et.IdAttributeId=a.AttributeId
-INNER JOIN Indexes i ON i.IndexTypeId=et.DefaultIndexTypeId 
-INNER JOIN Entities e ON e.EntityId=i.EntityId";
+INNER JOIN Indexes i ON i.Id=et.DefaultIndexTypeId 
+INNER JOIN Entities e ON e.Id=i.EntityId";
 
             using Proton2Context ctx = new();
             ctx.Database.ExecuteSqlRaw(sql);
@@ -254,9 +250,14 @@ INNER JOIN Entities e ON e.EntityId=i.EntityId";
 
         public static void LoadMetadata()
         {
+            if (!ConfigurationManager.AppSettings.TestConnection())
+            {
+               return;
+            }
+
             using Proton2Context ctx = new();
             var progress = new Progress(10);
-            float  c = 0;
+            float  c = 1;
             var bulkConfig = new BulkConfig { SqlBulkCopyOptions = SqlBulkCopyOptions.KeepIdentity,   };
             var bulkConfig2 = new BulkConfig { SqlBulkCopyOptions = SqlBulkCopyOptions.KeepIdentity, IncludeGraph=true };
             Console.WriteLine("Loading /updating metadata");
@@ -351,7 +352,7 @@ INNER JOIN Entities e ON e.EntityId=i.EntityId";
             {
                 ctx.BulkInsert(MetaDataFunctions.GetUserStarters(), bulkConfig);
             }
-            progress.WriteProgressBar(c / (float)9); c++;
+            progress.WriteProgressBar(1);
 
 
         }

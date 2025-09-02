@@ -80,7 +80,7 @@ public partial class Proton2Context : DbContext
         valueDate.Property(f => f.Value).HasColumnType(nameof(SqlDbType.Date));
 
         var valueTime = modelBuilder.Entity<ValueTime>();
-        valueTime.Property(f => f.Value).HasColumnType("time(0)");
+        valueTime.Property(f => f.Value).HasColumnType(nameof(SqlDbType.Time));
 
         var entity = modelBuilder.Entity<Entity>();
         entity.Property(f => f.LastUpdated).HasColumnType(nameof(SqlDbType.SmallDateTime));

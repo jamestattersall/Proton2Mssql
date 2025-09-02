@@ -8,7 +8,7 @@ These files should be copied onto a Windows server, accessible to this app or on
 The files include base.dbs, entity.dbs, data.dbs, item.dbs. dict.dbs, code.dbs, screen.dbs, scrtext.dbs, index.dbs, indexdef.dbs, trgroup.dbs.
 
 The app presents a console with options to set the settings required to create the SQL connection string and the path to the Proton .dbs files.
-The settings are stored in an encypted on teh local mcine.
+The settings are stored in an encypted on the local mcine.
 
 When the settings have been entered, the option load/update metadata creates the SQL database and populates the SQL tables with the metadata required to interpret the proton data. This metadata includes screen layouts, field names, captions, menu structures, encrypted passwords etc.
 
@@ -513,6 +513,7 @@ The entity (object) instances
 
 Allow page chain: no
 
+Bytes 32-35: TIME: no of milliseconds since midnight on day of latest update
 Bytes 36-37: DATE: latest date of any updates
 
 ## SCREEN.DBS
@@ -651,7 +652,7 @@ To find the first page in data.dbs page chain containing data for a specified en
 2. Access the record with the same entity instance ID in VRX.DBS.
 3. Read the page ID as a 4-byte integer from offset 4 (first data block).
 
-To find the value of as specified item (e.g. data of birth) for a specified patient.
+To find the value of as specified item (e.g. date of birth) for a specified patient.
 
 1. Get the entity instance ID for the patient as above
 2. Access the record with the same entity instance ID in VRX.DBS.

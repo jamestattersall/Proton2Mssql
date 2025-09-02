@@ -1,6 +1,7 @@
 ﻿using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
+using ProtonConsole2.Proton;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -69,6 +70,7 @@ namespace ProtonConsole2.Utilities
                 string json = Protection.Decrypt(enc);
                 AppSettings? asst  = System.Text.Json.JsonSerializer.Deserialize<AppSettings>(json);
                 if (asst != null ) {AppSettings = asst;}
+                ProtonBase.SetProtonBase(AppSettings.PathToProtonFolder);
 
             } else
             {
@@ -88,13 +90,27 @@ namespace ProtonConsole2.Utilities
 
         public static void SetDBname()
         {
-            string? dbn = Questioner.GetStringResponse("Enter DB name", AppSettings.DBname);
-            if (!dbn.IsNullOrEmpty())
+            int trycount = 0; ;
+            while (trycount < 4)
             {
-                AppSettings.DBname = dbn!;
-                SaveSettings();
-            }
 
+                string? dbn = Questioner.GetStringResponse("Enter DB name", AppSettings.DBname);
+                if (!dbn.IsNullOrEmpty())
+                {
+                    AppSettings.DBname = dbn!;
+                    SaveSettings();
+                    trycount = 10;
+                } else
+                {
+                    var toExit = Questioner.GetBoolResponse("Continue without saving?", false);
+                    if (toExit != null || toExit == true)
+                    {
+                        trycount = 10;
+                    }
+                }
+                trycount++;
+            }
+            Questioner.EditSettings();
         }
 
         public static void SetPathToProtonDbs()
@@ -102,22 +118,33 @@ namespace ProtonConsole2.Utilities
             int trycount = 0; ;
             while (trycount<4) { 
                 string? path = Questioner.GetStringResponse("Enter Proton dbs files directory path:", AppSettings.PathToProtonFolder);
-           
-                if (System.IO.Directory.Exists(path)) 
+                if (path.IsNullOrEmpty())
                 {
-                    var filename = path.EndsWith("/")? "BASE.DBS" : "/BASE.DBS";
-                    if (System.IO.File.Exists(path + filename))
+                    var toExit = Questioner.GetBoolResponse("Continue without saving?", false);
+                    if (toExit != null || toExit == true)
                     {
-                        AppSettings.PathToProtonFolder = path!;
-                        SaveSettings();
-                        trycount = 10; ;
-
+                        trycount = 10;
                     }
-                    Console.WriteLine("Directory does not contain base.dbs file.");
-                }
-                else
+                } else
                 {
-                    Console.WriteLine("Directory not found");
+                    if (System.IO.Directory.Exists(path))
+                    {
+                        if (path.Contains("/") && !path.EndsWith("/")) path += "/";
+                        if (path.Contains(@"\") && !path.EndsWith(@"\")) path += @"\";
+                        var filename = "BASE.DBS";
+                        if (System.IO.File.Exists(path + filename))
+                        {
+                            AppSettings.PathToProtonFolder = path!;
+                            SaveSettings();
+                            trycount = 10; ;
+                            ProtonBase.SetProtonBase(AppSettings.PathToProtonFolder);
+
+                        } else Console.WriteLine("Directory does not contain base.dbs file.");
+                    }
+                    else
+                    {
+                        Console.WriteLine("Directory not found");
+                    }
                 }
                 trycount++;
             }
@@ -132,28 +159,19 @@ namespace ProtonConsole2.Utilities
                 var sa = Questioner.GetStringResponse("Enter SQL server address", AppSettings.Server);
                 if (!sa.IsNullOrEmpty())
                 {
-                    var pi = new Ping();
-                    try
-                    {
-                        PingReply reply = pi.Send(sa);
-                        if (reply.Status == IPStatus.Success)
-                        {
-                            AppSettings.Server = sa!;
-                            SaveSettings();
-                            trycount = 10;
-
-                        }
-                        else
-                        {
-                            Console.WriteLine("Server not contactable");
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine(ex.Message);
-                    }
-                    trycount++;
+                    AppSettings.Server = sa!;
+                    SaveSettings();
+                    trycount = 10;
                 }
+                else
+                {
+                    var toExit = Questioner.GetBoolResponse("Continue without saving?", false);
+                    if (toExit != null || toExit == true)
+                    {
+                        trycount = 10;
+                    }
+                }
+                trycount++;
             }
 
             Questioner.EditSettings();
@@ -168,13 +186,16 @@ namespace ProtonConsole2.Utilities
                 string? pwd = Questioner.GetStringResponse("Enter DB password", AppSettings.DBPassword);
                 if (!pwd.IsNullOrEmpty())
                 {
-                    AppSettings.DBPassword = pwd!;
-                    if (AppSettings.TestConnection())
+                    SaveSettings();
+                    trycount = 10;
+                }
+                else
+                {
+                    var toExit = Questioner.GetBoolResponse("Continue without saving?", false);
+                    if (toExit != null || toExit == true)
                     {
-                        SaveSettings();
                         trycount = 10;
                     }
-                    Console.WriteLine("Unable to login with: " + AppSettings.SQLConnectionString());
                 }
                 trycount++;
             }
@@ -185,12 +206,27 @@ namespace ProtonConsole2.Utilities
 
         public static void SetDbIntegretedSecurity()
         {
-            bool? igp = Questioner.GetBoolResponse("Db Integrated security", AppSettings.DBIsIntegrated);
-            if (igp != null)
-            {
-                AppSettings.DBIsIntegrated = (bool)igp!;
-                SaveSettings();
+            int trycount = 0;
+            while (trycount < 4) { 
+                bool? igp = Questioner.GetBoolResponse("Db Integrated security", AppSettings.DBIsIntegrated);
+                if (igp != null)
+                {
+                    AppSettings.DBIsIntegrated = (bool)igp!;
+                    SaveSettings();
+                    trycount = 10;
+                }
+                else
+                {
+                    var toExit = Questioner.GetBoolResponse("Continue without saving?", false);
+                    if (toExit != null || toExit == true)
+                    {
+                        trycount = 10;
+                    }
+                }
+                trycount++;
             }
+
+            Questioner.EditSettings();
         }
     }
 
@@ -224,10 +260,12 @@ namespace ProtonConsole2.Utilities
                 try
                 {
                     connection.Open();
+                    connection.Close();
                     return true;
                 }
                 catch (SqlException)
                 {
+                    Console.WriteLine("unable to connect to server using:" + ConfigurationManager.AppSettings.SQLConnectionString());
                     return false;
                 }
             }

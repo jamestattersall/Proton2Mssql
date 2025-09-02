@@ -144,7 +144,7 @@ namespace ProtonConsole2.ProtonToSql
         {
             EntityType? et = EntityTypeReader.GetEntityType(entityTypeId);
             if (et == null) throw new InvalidDataException("invalid entitypeId: " + entityTypeId.ToString());
-            return (EntityType)et;
+            return et;
         }
 
         public int GetEntityId(short entityTypeId, string key)

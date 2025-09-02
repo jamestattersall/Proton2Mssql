@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlTypes;
+using System.IO;
 using System.IO.Pipelines;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -17,14 +18,14 @@ namespace ProtonConsole2.Proton
         static Dictionary<string, short> PageLengths { get; }
     }
 
-    public class ProtonBase : IProtonBase, IDisposable
+    public static class ProtonBase 
     {
-
-
         public static string ProtonFolderPath { get; private set; }
-        public static  Dictionary<string, short> PageLengths { get; } = [];
-        public ProtonBase(string pathToBinaries)
-        { 
+        public  static  Dictionary<string, short> PageLengths { get; } = [];
+        public static void SetProtonBase(string pathToBinaries)
+        {
+            if (pathToBinaries.Contains("/") && !pathToBinaries.EndsWith("/")) pathToBinaries += "/";
+            if (pathToBinaries.Contains(@"\") && !pathToBinaries.EndsWith(@"\")) pathToBinaries += @"\";
             ProtonFolderPath = pathToBinaries;
 
             using Base _base = new();
@@ -33,50 +34,12 @@ namespace ProtonConsole2.Proton
 
             for (int i = 1; i <= _base.NPages; i++)
             {
-            
                 if (_base.MoveToPage(i))
                 {
                     PageLengths.Add(_base.Name, _base.DbPageLength);
                 }
-                
-            }
-
-        }
-
-        
-        private bool disposedValue;
-
-
-        protected virtual void Dispose(bool disposing)
-        {
-            if (!disposedValue)
-            {
-                if (disposing)
-                {
-                    PageLengths.Clear();
-                    
-                }
-
-                // TODO: free unmanaged resources (unmanaged objects) and override finalizer
-                // TODO: set large fields to null
-                disposedValue = true;
             }
         }
-
-        // // TODO: override finalizer only if 'Dispose(bool disposing)' has code to free unmanaged resources
-        // ~ProtonDb()
-        // {
-        //     // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-        //     Dispose(disposing: false);
-        // }
-
-        void IDisposable.Dispose()
-                {
-            // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-            Dispose(disposing: true);
-            GC.SuppressFinalize(this);
-        }
-
     }
 
 
@@ -114,7 +77,7 @@ namespace ProtonConsole2.Proton
                 PageLength = pageLength;
             }
 
-            _fileStream = new FileStream(ProtonBase.ProtonFolderPath + "\\" + dbName, FileMode.Open, FileAccess.Read, FileShare.None, pageLength, false);
+            _fileStream = new FileStream(ProtonBase.ProtonFolderPath + dbName, FileMode.Open, FileAccess.Read, FileShare.None, pageLength, false);
             FileLength = _fileStream.Length;
             NPages = (int)FileLength/PageLength;
             _pageBuffer = new byte[PageLength];

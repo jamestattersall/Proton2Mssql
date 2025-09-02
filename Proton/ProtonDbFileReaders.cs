@@ -157,7 +157,7 @@ namespace ProtonConsole2.Proton
         {
             if (base.MoveToNextBlock())
             {
-                return PageMemory.Span[ Ptr] != 0x0;
+                return PageMemory.Span[Ptr] != 0x0;
             }
             return false;
         }
