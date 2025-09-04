@@ -28,18 +28,4 @@ public partial class IndexType
     [NotMapped]
     public int MiddleIndexId { get; set; }// 
 
-
-    [NotMapped]
-    public int AttributeId1 { get; set; }// 
-
-
-    [NotMapped]
-    public int? AttributeId2 { get; set; }// 
-
-    [ForeignKey(nameof(IdLineViewId))]
-    public virtual View? IdLineView { get; set; } = null;
-
-    public virtual EntityType? EntityType { get; set; } = null;
-
-    public virtual ICollection<Index> Indices { get; set; } = [];
 }

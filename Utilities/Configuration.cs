@@ -19,31 +19,6 @@ namespace ProtonConsole2.Utilities
             path = Directory.GetCurrentDirectory() + "\\appsettings.json";
             AppSettings = new();
             LoadSettings();
-            if(AppSettings.UserPassword.IsNullOrEmpty())
-            {
-                SetUserPassword();
-            }
-            if (AppSettings.PathToProtonFolder.IsNullOrEmpty())
-            {
-                SetPathToProtonDbs();
-            }
-            if (AppSettings.Server.IsNullOrEmpty())
-            {
-               SetDbServer();
-            }
-            if (AppSettings.DBname.IsNullOrEmpty())
-            {
-                SetDBname();
-            }
-
-            if (!AppSettings.DBIsIntegrated! && AppSettings.DBPassword.IsNullOrEmpty())
-            {
-               SetDbIntegretedSecurity();
-                if (!AppSettings.DBIsIntegrated)
-                {
-                    SetDbPassword();
-                }
-            }
         }
 
         private static string path;
@@ -53,7 +28,7 @@ namespace ProtonConsole2.Utilities
         public static void SaveSettings(bool withFeedback = true)
         {
             string json = System.Text.Json.JsonSerializer.Serialize<AppSettings>(AppSettings);
-            System.IO.File.WriteAllText(path , Protection.Crypt(json));
+            System.IO.File.WriteAllText(path , json);
             if (withFeedback)
             {
                 Console.WriteLine("settings saved successfully");
@@ -66,15 +41,18 @@ namespace ProtonConsole2.Utilities
         {
             if (System.IO.File.Exists(path))
             {
-                string enc = System.IO.File.ReadAllText(path );
-                string json = Protection.Decrypt(enc);
+                string json = System.IO.File.ReadAllText(path );
+                //string json = Protection.Decrypt(enc);
                 AppSettings? asst  = System.Text.Json.JsonSerializer.Deserialize<AppSettings>(json);
                 if (asst != null ) {AppSettings = asst;}
-                ProtonBase.SetProtonBase(AppSettings.PathToProtonFolder);
+                if (!AppSettings.PathToProtonFolder.IsNullOrEmpty())
+                {
+                    ProtonBase.SetProtonBase(AppSettings.PathToProtonFolder);
+                }
 
             } else
             {
-                SaveSettings();
+                SaveSettings(false);
             }
         }
 
@@ -241,11 +219,14 @@ namespace ProtonConsole2.Utilities
         public string PathToProtonFolder { get; set; } = string.Empty;
         public  DateTime LastUpdate { get; set; } = DateTime.MinValue;
 
-        public string SQLConnectionString()
+        public string SQLConnectionString(bool isDefault = false)
         {
             var sb = new SqlConnectionStringBuilder();
             sb.DataSource = Server;
-            sb.InitialCatalog = DBname;
+            if (isDefault)
+            {
+                sb.InitialCatalog = "master";
+            } else  sb.InitialCatalog = DBname;
             sb.IntegratedSecurity = DBIsIntegrated;
             if (!DBIsIntegrated )  sb.Password = DBPassword;
             sb.CommandTimeout = 100000;
@@ -253,9 +234,9 @@ namespace ProtonConsole2.Utilities
             return sb.ToString();
         }
 
-        public bool TestConnection()
+        public bool TestConnection(bool defaultDb=false)
         {
-            using (SqlConnection connection = new SqlConnection(SQLConnectionString()))
+            using (SqlConnection connection = new SqlConnection(SQLConnectionString(defaultDb)))
             {
                 try
                 {
@@ -263,29 +244,21 @@ namespace ProtonConsole2.Utilities
                     connection.Close();
                     return true;
                 }
-                catch (SqlException)
+                catch (SqlException ex)
                 {
-                    Console.WriteLine("unable to connect to server using:" + ConfigurationManager.AppSettings.SQLConnectionString());
+                    Console.WriteLine("unable to connect to server using:" + ConfigurationManager.AppSettings.SQLConnectionString(true) + " " + ex.Message);
                     return false;
                 }
             }
         }
-    }
-
-    public static class Protection
-    {
-        public static string Crypt(string text)
+        public bool TestPathToProton()
         {
-            return Convert.ToBase64String(
-                ProtectedData.Protect(
-                    Encoding.Unicode.GetBytes(text), null, DataProtectionScope.LocalMachine));
+            return (File.Exists(PathToProtonFolder + "BASE.dbs"));
         }
 
-        public static string Decrypt( string text)
+        public bool IsValid()
         {
-            return Encoding.Unicode.GetString(
-                ProtectedData.Unprotect(
-                     Convert.FromBase64String(text), null, DataProtectionScope.LocalMachine));
+            return TestPathToProton() && TestConnection(true);
         }
     }
 }

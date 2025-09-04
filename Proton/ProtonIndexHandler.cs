@@ -77,8 +77,6 @@ namespace ProtonConsole2.ProtonToSql
                                     IdLineViewId = indexDef.IdlineScreenId,
                                     KeyLength = indexDef.KeyLength,
                                     Prefix = keyDef.Prefix,
-                                    AttributeId1=keyDef.KeyMatchItemId1,
-                                    AttributeId2 = keyDef.KeyMatchItemId2  
                                 });
                             }
                         }

@@ -16,6 +16,5 @@ namespace ProtonConsole2.DataContext
         [Column(TypeName = "varchar(255)")]
         public required string Name { get; set; }
 
-        public virtual ICollection<Lookup> Lookups { get; set; } = [];
     }
 }

@@ -17,9 +17,6 @@ public partial class Entity
 
     public DateTime LastUpdated { get; set; }
 
-
-    public virtual ICollection<Index> Indices { get; set; } = new List<Index>();
-
     public virtual ICollection<ValueDate> ValueDates { get; set; } = new List<ValueDate>();
     public virtual ICollection<ValueEntity> ValueEntities { get; set; } = new List<ValueEntity>();
     public virtual ICollection<ValueLookup> ValueLookups { get; set; } = new List<ValueLookup>();

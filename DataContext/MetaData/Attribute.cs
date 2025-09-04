@@ -23,23 +23,6 @@ public class Attribute
 
     public short? DisplayLength { get; set; } 
 
-    public virtual DataType? DataType { get; set; }
-
-    public virtual Table? Table { get; set; } 
-
-    public virtual EntityType? EntityType { get; set; } 
-
-    public virtual ICollection<ValueDate> ValueDates { get; set; } = new List<ValueDate>();
-
-    public virtual ICollection<ValueEntity> ValueEntities { get; set; } = new List<ValueEntity>();
-
-    public virtual ICollection<ValueLookup> ValueLookups { get; set; } = new List<ValueLookup>();
-
-    public virtual ICollection<ValueNumber> ValueNumbers { get; set; } = new List<ValueNumber>();
-
-    public virtual ICollection<ValueText> ValueTexts { get; set; } = new List<ValueText>();
-
-    public virtual ICollection<ViewAttribute> ViewAttributes { get; set; } = new List<ViewAttribute>();
 }
 
 public enum DataTypes

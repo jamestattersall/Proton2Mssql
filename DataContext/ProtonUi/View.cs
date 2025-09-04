@@ -21,11 +21,4 @@ public partial class View
 
     public short EntityTypeId { get; set; }
 
-    public virtual Table? Table { get; set; }
-
-    public virtual EntityType? EntityType { get; set; }
-
-    public virtual ICollection<ViewAttribute> ViewAttributes { get; set; } = new List<ViewAttribute>();
-
-    public virtual ICollection<ViewCaption> ViewCaptions { get; set; } = new List<ViewCaption>();
-}
+ }

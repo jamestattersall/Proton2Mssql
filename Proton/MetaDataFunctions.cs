@@ -14,6 +14,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks.Dataflow;
 using System.Transactions;
+using System.Xml;
 
 namespace ProtonConsole2.Proton
 {
@@ -130,13 +131,12 @@ namespace ProtonConsole2.Proton
             using Proton.TrGroup grp = new();
             using Proton.Item itm = new();
             using Proton.EntityDef ent = new();
-            using Proton.Valid vald = new();
             for (short i = 1; i <= itm.NPages; i++)
             {
                 if (itm.MoveToPage(i) && itm.IsInstalled && itm.DataType > 0 && itm.EntityTypeId > 0)
                 {
                     short tableId = (itm.GroupId == 0) ? (short)-itm.EntityTypeId : itm.GroupId;
-            
+
                     Table? tbl = list.GetValueOrDefault(tableId);
                     if (tbl == null)
                     {
@@ -173,6 +173,26 @@ namespace ProtonConsole2.Proton
                         }
                         list.Add(tableId, tbl);
                     }
+                }
+            }
+
+            return list.Values.ToList();
+        }
+
+
+        public static List<DataContext.Attribute> GetAttributes()
+        {
+            List<DataContext.Attribute> list = new();
+            using Proton.Screen scrn = new();
+            using Proton.TrGroup grp = new();
+            using Proton.Item itm = new();
+            using Proton.Valid vald = new();
+            for (short i = 1; i <= itm.NPages; i++)
+            {
+                if (itm.MoveToPage(i) && itm.IsInstalled && itm.DataType > 0 && itm.EntityTypeId > 0)
+                {
+                    short tableId = (itm.GroupId == 0) ? (short)-itm.EntityTypeId : itm.GroupId;
+
                     DataContext.Attribute attr = new()
                     {
                         Id = (short)itm.ItemId,
@@ -231,14 +251,13 @@ namespace ProtonConsole2.Proton
                         }
 
                     }
-                    tbl.Attributes.Add(attr);
+                    list.Add(attr);
 
                 }
             }
 
-            return list.Values.ToList();
+            return list;
         }
-
 
         public static List<DataContext.Menu> GetMenus()
         {
@@ -248,11 +267,29 @@ namespace ProtonConsole2.Proton
             {
                 if (menu.MoveToPage(i))
                 {
-                    DataContext.Menu mnu = new() { Id = i, Name = menu.Name };
+                    list.Add(new()
+                    {
+                        Id = i,
+                        Name = menu.Name
+                    });
+                
+                }
+            }
+            return list;
+        }
+
+        public static List<MenuItem> GetMenuItems()
+        {
+            using Proton.Menu menu = new();
+            var list = new List<MenuItem>();
+            for (short i = 1; i <= menu.NPages; i++)
+            {
+                if (menu.MoveToPage(i))
+                {
                     byte c = 0;
                     while (menu.MoveToNextBlock())
                     {
-                        mnu.MenuItems.Add(new()
+                        list.Add(new()
                         {
                             MenuId = i,
                             Seq = c,
@@ -268,7 +305,6 @@ namespace ProtonConsole2.Proton
 
                         c++;
                     }
-                    list.Add(mnu);
                 }
             }
 
@@ -276,38 +312,6 @@ namespace ProtonConsole2.Proton
 
         }
 
-
-
-
-        //await context.BulkInsertAsync(GetEntityInstances(context));
-
-        //var tables = GetTables(context);
-
-
-        //uint eid = 11134;
-        //List<TableRow> tableRows = GetTableRows(eid);
-
-        //await context.BulkInsertAsync(tableRows, b => b.IncludeGraph = true);
-        ////await context.BulkInsertAsync(GetValueTexts(tableRows));
-        //var gt = GetValueTexts(tableRows);
-
-        //uint eid = 11134;
-        //using (var transaction = context.Database.BeginTransaction())
-        //{
-        //    var tableRows = GetTableRows(eid);
-        //    List<ValueText> valueTexts = new();
-        //    await context.BulkInsertAsync(tableRows, new BulkConfig { SetOutputIdentity = true });
-        //    foreach (var row in tableRows)
-        //    {
-        //        foreach (var valueText in row.ValueTexts)
-        //        {
-        //            valueText.TableRowId = row.TableRowId; // sets FK to match linked PK that was generated in DB
-        //        }
-        //        valueTexts.AddRange(row.ValueTexts);
-        //    }
-        //    await context.BulkInsertAsync(valueTexts);
-        //    transaction.Commit();
-        //}
 
 
         public static List<LookupType> GetLookupTypes()
@@ -378,68 +382,120 @@ namespace ProtonConsole2.Proton
             using (Proton.Item itm = new())
             using (Proton.Menu menu = new())
             using (Proton.TrGroup grp = new())
-            
-            for (short ix = 1; ix <= scrn.NPages; ix++)
-            {
-                if (scrn.MoveToPage(ix) && itm.MoveToPage(scrn.ItemId))
+
+                for (short ix = 1; ix <= scrn.NPages; ix++)
                 {
-                    var scrObj = new View()
+                    if (scrn.MoveToPage(ix) && itm.MoveToPage(scrn.ItemId))
                     {
-                        Id = ix,
-                        Name = scrn.Name,
-                        TableId = itm.GroupId == 0 ? (short)-itm.EntityTypeId: itm.GroupId,
-                        EntityTypeId = itm.EntityTypeId,
-                        NRows = scrn.RowCount,
-                        NItems = scrn.ItemCount
-                    };
-             
-                    if (scrn.MoveToPage(itm.GroupId))
-                    {
-                        if (scrn.Name.Length > scrObj.Name.Length)
+                        var scrObj = new View()
                         {
-                            scrObj.Name = scrn.Name;
-                        }
-                        scrn.MoveToPage(ix);
-                    }
-                    if (grp.MoveToPage(itm.GroupId))
-                    {
-                        if (grp.Name.Length > scrObj.Name.Length)
+                            Id = ix,
+                            Name = scrn.Name,
+                            TableId = itm.GroupId == 0 ? (short)-itm.EntityTypeId : itm.GroupId,
+                            EntityTypeId = itm.EntityTypeId,
+                            NRows = scrn.RowCount,
+                            NItems = scrn.ItemCount
+                        };
+
+                        if (scrn.MoveToPage(itm.GroupId))
                         {
-                            scrObj.Name = grp.Name;
-                        }
-                    }
-                    bool breakLoop = false;
-                    for (short ixm = 1; ixm <= menu.NPages; ixm++)
-                    {
-                        if (menu.MoveToPage(ixm))
-                        {
-                            while (menu.MoveToNextBlock())
+                            if (scrn.Name.Length > scrObj.Name.Length)
                             {
-                                if (menu.Function == "SCRN" && menu.Parameter1 == ix)
+                                scrObj.Name = scrn.Name;
+                            }
+                            scrn.MoveToPage(ix);
+                        }
+                        if (grp.MoveToPage(itm.GroupId))
+                        {
+                            if (grp.Name.Length > scrObj.Name.Length)
+                            {
+                                scrObj.Name = grp.Name;
+                            }
+                        }
+                        bool breakLoop = false;
+                        for (short ixm = 1; ixm <= menu.NPages; ixm++)
+                        {
+                            if (menu.MoveToPage(ixm))
+                            {
+                                while (menu.MoveToNextBlock())
                                 {
-                                    if (scrObj.Name.Length > menu.ItemName.Length)
+                                    if (menu.Function == "SCRN" && menu.Parameter1 == ix)
                                     {
-                                        scrObj.Name = menu.ItemName;
-                                        breakLoop = true;
-                                        break;
+                                        if (scrObj.Name.Length > menu.ItemName.Length)
+                                        {
+                                            scrObj.Name = menu.ItemName;
+                                            breakLoop = true;
+                                            break;
+                                        }
                                     }
                                 }
+                                if (breakLoop) break;
                             }
-                            if (breakLoop) break;
                         }
-                    }
-          
-       
-                    short seq = 0;
-                    while (scrn.MoveToNextBlock() && (scrn.ItemId * scrn.X * scrn.Y) > 0)
-                    {
-                        var itemId = scrn.ItemId;
-                        if (itm.MoveToPage(itemId) && itm.IsInstalled)
+
+
+                        short seq = 0;
+
+                        if (scrtxt.MoveToPage(ix))
                         {
-                            scrObj.ViewAttributes.Add(new()
+                            seq = 0;
+                            string nm = scrtxt.Text.Replace("date of", "", StringComparison.CurrentCultureIgnoreCase).Replace("date at", "", StringComparison.OrdinalIgnoreCase).Replace("date", "", StringComparison.OrdinalIgnoreCase).Trim();
+                            if (nm.Length > scrObj.Name.Length)
+                            {
+                                scrObj.Name = nm;
+                            }
+  
+                        }
+                        list.Add(scrObj);
+                    }
+                }
+
+            return list;
+
+
+        }
+
+        class ViewAttributeEquality : EqualityComparer<ViewAttribute>
+        {
+            public override bool Equals(ViewAttribute? b1, ViewAttribute? b2)
+            {
+                if (b1 == null && b2 == null)
+                    return true;
+                else if (b1 == null || b2 == null)
+                    return false;
+
+                return (b1.ViewId == b2.ViewId &&
+                        b1.Seq == b2.Seq) ;
+            }
+
+            public override int GetHashCode(ViewAttribute bx)
+            {
+                int hCode = bx.ViewId ^ bx.Seq;
+                return hCode.GetHashCode();
+            }
+        }
+
+        public static List<ViewAttribute> GetViewAttributes()
+        {
+            List<ViewAttribute> list = [];
+
+            using (Proton.Screen scrn = new())
+            using (Proton.Item itm = new())
+
+            for (short ix = 1; ix <= scrn.NPages; ix++)
+            {
+                if (scrn.MoveToPage(ix) )
+                {
+                    short seq = 0;
+                    while (scrn.MoveToNextBlock() && ( scrn.X * scrn.Y) > 0)
+                    {
+                        short itemId = scrn.ItemId;
+                        if (itemId>0 && itm.MoveToPage(itemId) && itm.IsInstalled)
+                        {
+                            list.Add(new()
                             {
                                 ViewId = ix,
-                                AttributeId = scrn.ItemId,
+                                AttributeId = itemId,
                                 Seq = seq,
                                 X = scrn.X,
                                 Y = scrn.Y
@@ -447,38 +503,39 @@ namespace ProtonConsole2.Proton
                             seq++;
                         }
                     }
-                    if (scrtxt.MoveToPage(ix))
-                    {
-                        seq = 0;
-                        string nm = scrtxt.Text.Replace("date of", "", StringComparison.CurrentCultureIgnoreCase).Replace("date at", "", StringComparison.OrdinalIgnoreCase).Replace("date", "", StringComparison.OrdinalIgnoreCase).Trim();
-                        if (nm.Length > scrObj.Name.Length)
-                        {
-                            scrObj.Name = nm;
-                        }
-                        while (scrtxt.MoveToNextBlock() && (scrtxt.Text.Length * scrtxt.X * scrtxt.Y) > 0)
-                        {
-                    
-                            scrObj.ViewCaptions.Add(new()
-                            {
-                                ViewId = ix,
-                                Seq = seq,
-                                Caption = scrtxt.Text,
-                                X = scrtxt.X,
-                                Y = scrtxt.Y
-                            });
-                            seq++;
-                        }
-                    }
-                    list.Add(scrObj);
-
-                        
                 }
             }
+            return list.Distinct(new ViewAttributeEquality() ).ToList();
+        }
 
+        public static List<ViewCaption> GetViewCaptions()
+        {
+            List<ViewCaption> list = new();
+            using (Proton.ScrTxt scrtxt = new())
+            for (short ix = 1; ix <= scrtxt.NPages; ix++)
+            {
+                if (scrtxt.MoveToPage(ix))
+                {
+                    short seq = 0;
+         
+                    while (scrtxt.MoveToNextBlock() && (scrtxt.Text.Length * scrtxt.X * scrtxt.Y) > 0)
+                    {
+                        list.Add(new()
+                        {
+                            ViewId = ix,
+                            Seq = seq,
+                            Caption = scrtxt.Text,
+                            X = scrtxt.X,
+                            Y = scrtxt.Y
+                        });
+                        seq++;
+                    }
+                }
+            }
             return list;
-            
-
         }
 
     }
+
+
 }

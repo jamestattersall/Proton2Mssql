@@ -7,11 +7,12 @@ using ProtonConsole2.Utilities;
 using System.Text.Json;
 
 
-Questioner.HomeEdit();
+Questioner.EditSettings();
 return;
 
-var ctx = new Proton2Context();
 //code below for debugging;
+
+var ctx = new Proton2Context();
 var ited = MetaDataFunctions.GetViews();
 var options = new JsonSerializerOptions { WriteIndented = true, NumberHandling = System.Text.Json.Serialization.JsonNumberHandling.AllowNamedFloatingPointLiterals };
 var bulkConfig2 = new BulkConfig { SqlBulkCopyOptions = SqlBulkCopyOptions.KeepIdentity, IncludeGraph = true };

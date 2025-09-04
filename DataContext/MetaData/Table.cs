@@ -17,9 +17,4 @@ public partial class Table
 
     public short DateAttributeId { get; set; }
 
-    public virtual EntityType EntityType { get; set; }
-
-    public virtual ICollection<Attribute> Attributes { get; set; } = new List<Attribute>();
-
-    public virtual ICollection<View> Views { get; set; } = new List<View>();
 }

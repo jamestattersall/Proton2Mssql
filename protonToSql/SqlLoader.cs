@@ -4,6 +4,7 @@ using Microsoft.IdentityModel.Tokens;
 using ProtonConsole2.DataContext;
 using ProtonConsole2.Proton;
 using ProtonConsole2.Utilities;
+using System.Data.Common;
 using System.Diagnostics;
 namespace ProtonConsole2.ProtonToSql
 {
@@ -59,7 +60,7 @@ namespace ProtonConsole2.ProtonToSql
             Console.WriteLine("");
 
             Console.WriteLine("Loading data for {0} entities", maxId.ToString());
-            List<Entity> entities = [];
+            List<Entity> entities = new(); ;
             using Proton2Context ctx = new();
             DbSet<Entity> entityDbSet = ctx.Entities;
             int currentpageCount = 0;
@@ -97,7 +98,8 @@ namespace ProtonConsole2.ProtonToSql
                     {
                         currentpageCount = dataPageCount;
                         copyChangesToSqlDb(entities, ctx);
-                        entities = [];
+                        //entities = [];
+                        entities.Clear();
 
                         conu.WriteProgressBar(currentpageCount, totalPages);
                         if (entityId > maxEntityId) { 
@@ -180,7 +182,7 @@ namespace ProtonConsole2.ProtonToSql
             Progress progress = new(20);
             index.PageCounterReset();
             var dataExists = ctx.Indexes.Any();
-            ctx.Database.ExecuteSql($"ALTER TABLE Indexes NOCHECK CONSTRAINT FK_Indexes_Entities_EntityId");
+            //ctx.Database.ExecuteSql($"ALTER TABLE Indexes NOCHECK CONSTRAINT FK_Indexes_Entities_EntityId");
             var sw = new Stopwatch();
             sw.Start();
             for (short indexTypeId = 1; indexTypeId <= indexDef.NPages; indexTypeId++)
@@ -254,105 +256,192 @@ INNER JOIN Entities e ON e.Id=i.EntityId";
             {
                return;
             }
+            float nTables = 12;
 
             using Proton2Context ctx = new();
             var progress = new Progress(10);
             float  c = 1;
-            var bulkConfig = new BulkConfig { SqlBulkCopyOptions = SqlBulkCopyOptions.KeepIdentity,   };
-            var bulkConfig2 = new BulkConfig { SqlBulkCopyOptions = SqlBulkCopyOptions.KeepIdentity, IncludeGraph=true };
+            var bulkConfig = new BulkConfig { SqlBulkCopyOptions = SqlBulkCopyOptions.KeepIdentity, UseTempDB = false };
+            var bulkConfig2 = new BulkConfig { SqlBulkCopyOptions = SqlBulkCopyOptions.KeepIdentity, IncludeGraph=true , UseTempDB=false};
             Console.WriteLine("Loading /updating metadata");
 
             if (ctx.DataTypes.Any())
             {
-                ctx.BulkInsertOrUpdate(MetaDataFunctions.GetDataTypes(), bulkConfig);
+                ctx.DataTypes.UpdateRange(MetaDataFunctions.GetDataTypes());
+                //ctx.BulkInsertOrUpdate(MetaDataFunctions.GetDataTypes(), bulkConfig);
             } else
             {
-                ctx.BulkInsert(MetaDataFunctions.GetDataTypes(), bulkConfig);
+                ctx.DataTypes.AddRange(MetaDataFunctions.GetDataTypes());
+                //ctx.BulkInsert(MetaDataFunctions.GetDataTypes(), bulkConfig);
             }
-            progress.WriteProgressBar(c / (float)9); c++;
-
-
-            if (ctx.EntityTypes.Any())
-            {
-                ctx.BulkInsertOrUpdate(MetaDataFunctions.GetEntityTypes(), bulkConfig);
-            }
-            else
-            {
-                ctx.BulkInsert(MetaDataFunctions.GetEntityTypes(), bulkConfig);
-            }
-            progress.WriteProgressBar(c/(float)9); c++;
-
-            if (ctx.IndexTypes.Any())
-            {
-                ctx.BulkInsertOrUpdate(IndexTypeReader.GetIndexTypes(), bulkConfig);
-            }
-            else
-            {
-                ctx.BulkInsert(IndexTypeReader.GetIndexTypes(), bulkConfig);
-            }
-            progress.WriteProgressBar(c / (float)9); c++;
+            progress.WriteProgressBar(c / nTables); c++;
+            ctx.SaveChanges();
 
             if (ctx.Tables.Any())
             {
-                ctx.BulkInsertOrUpdate(MetaDataFunctions.GetTables(), bulkConfig2);
+                ctx.Tables.UpdateRange(MetaDataFunctions.GetTables());
+                //ctx.BulkInsertOrUpdate(MetaDataFunctions.GetTables(), bulkConfig);
             }
             else
             {
-                ctx.BulkInsert(MetaDataFunctions.GetTables(), bulkConfig2);
+                ctx.Tables.AddRange(MetaDataFunctions.GetTables());
+                //ctx.BulkInsert(MetaDataFunctions.GetTables(), bulkConfig);
             }
-            progress.WriteProgressBar(c / (float)9); c++;
+            progress.WriteProgressBar(c / nTables); c++;
+       
+
 
             if (ctx.Views.Any())
             {
-                ctx.BulkInsertOrUpdate(MetaDataFunctions.GetViews(), bulkConfig2);
+                ctx.Views.AddRange(MetaDataFunctions.GetViews());
+                // ctx.BulkInsertOrUpdate(MetaDataFunctions.GetViews(), bulkConfig);
             }
             else
             {
-                ctx.BulkInsert(MetaDataFunctions.GetViews(), bulkConfig2);
+                ctx.Views.AddRange(MetaDataFunctions.GetViews());
+                //ctx.BulkInsert(MetaDataFunctions.GetViews(), bulkConfig);
             }
-            progress.WriteProgressBar(c / (float)9); c++; 
+            progress.WriteProgressBar(c / nTables); c++;
+           
+
+            if (ctx.EntityTypes.Any())
+            {
+                ctx.EntityTypes.UpdateRange(MetaDataFunctions.GetEntityTypes());
+                //ctx.BulkInsertOrUpdate(MetaDataFunctions.GetEntityTypes(), bulkConfig);
+            }
+            else
+            {
+
+                ctx.EntityTypes.AddRange(MetaDataFunctions.GetEntityTypes());
+                //ctx.BulkInsert(MetaDataFunctions.GetEntityTypes(), bulkConfig);
+            }
+            progress.WriteProgressBar(c/ nTables); c++;
+            ctx.SaveChanges();
+
+            if (ctx.IndexTypes.Any())
+            {
+                ctx.IndexTypes.UpdateRange(IndexTypeReader.GetIndexTypes());
+               // ctx.BulkInsertOrUpdate(IndexTypeReader.GetIndexTypes(), bulkConfig);
+            }
+            else
+            {
+
+                ctx.IndexTypes.AddRange(IndexTypeReader.GetIndexTypes());
+                //ctx.BulkInsert(IndexTypeReader.GetIndexTypes(), bulkConfig);
+            }
+            progress.WriteProgressBar(c / nTables); c++;
+            ctx.SaveChanges();
+
+           
+            if (ctx.Attributes.Any())
+            {
+                ctx.Attributes.UpdateRange(MetaDataFunctions.GetAttributes());
+                //ctx.BulkInsertOrUpdate(MetaDataFunctions.GetAttributes(), bulkConfig);
+            }
+            else
+            {
+                ctx.Attributes.AddRange(MetaDataFunctions.GetAttributes());
+                //ctx.BulkInsert(MetaDataFunctions.GetAttributes(), bulkConfig);
+            }
+            progress.WriteProgressBar(c / nTables); c++;
+            ctx.SaveChanges();
+
+            
+
+            if (ctx.ViewAttributes.Any())
+            {
+                ctx.ViewAttributes.UpdateRange(MetaDataFunctions.GetViewAttributes());
+                // ctx.BulkInsertOrUpdate(MetaDataFunctions.GetViews(), bulkConfig);
+            }
+            else
+            {
+                ctx.ViewAttributes.AddRange(MetaDataFunctions.GetViewAttributes());
+                //ctx.BulkInsert(MetaDataFunctions.GetViews(), bulkConfig);
+            }
+            progress.WriteProgressBar(c / nTables); c++;
+            ctx.SaveChanges();
+
+            if (ctx.ViewCaptions.Any())
+            {
+                ctx.ViewCaptions.UpdateRange(MetaDataFunctions.GetViewCaptions());
+                // ctx.BulkInsertOrUpdate(MetaDataFunctions.GetViews(), bulkConfig);
+            }
+            else
+            {
+                ctx.ViewCaptions.AddRange(MetaDataFunctions.GetViewCaptions());
+                //ctx.BulkInsert(MetaDataFunctions.GetViews(), bulkConfig);
+            }
+            progress.WriteProgressBar(c / nTables); c++;
+            ctx.SaveChanges();
+
 
             if (ctx.LookupTypes.Any())
             {
-                ctx.BulkInsertOrUpdate(MetaDataFunctions.GetLookupTypes(), bulkConfig);
+                ctx.LookupTypes.UpdateRange(MetaDataFunctions.GetLookupTypes());
+                //ctx.BulkInsertOrUpdate(MetaDataFunctions.GetLookupTypes(), bulkConfig);
             }
             else
             {
-                ctx.BulkInsert(MetaDataFunctions.GetLookupTypes(), bulkConfig);
+                ctx.LookupTypes.AddRange(MetaDataFunctions.GetLookupTypes());
+               // ctx.BulkInsert(MetaDataFunctions.GetLookupTypes(), bulkConfig);
             }
-            progress.WriteProgressBar(c / (float)9); c++;
+            progress.WriteProgressBar(c / nTables); c++;
+            ctx.SaveChanges();
 
             if (ctx.Lookups.Any())
             {
-                ctx.BulkInsertOrUpdate(MetaDataFunctions.GetLookups(), bulkConfig);
+                ctx.Lookups.UpdateRange(MetaDataFunctions.GetLookups());
+                //ctx.BulkInsertOrUpdate(MetaDataFunctions.GetLookups(), bulkConfig);
             }
             else
             {
-                ctx.BulkInsert(MetaDataFunctions.GetLookups(), bulkConfig);
+                ctx.Lookups.AddRange(MetaDataFunctions.GetLookups());
+                //ctx.BulkInsert(MetaDataFunctions.GetLookups(), bulkConfig);
             }
-            progress.WriteProgressBar(c / (float)9); c++;
+            progress.WriteProgressBar(c / nTables); c++;
+            ctx.SaveChanges();
 
 
 
             if (ctx.Menus.Any())
             {
-                ctx.BulkInsertOrUpdate(MetaDataFunctions.GetMenus(), bulkConfig2);
+                ctx.Menus.UpdateRange(MetaDataFunctions.GetMenus());
+                //ctx.BulkInsertOrUpdate(MetaDataFunctions.GetMenus(), bulkConfig2);
             }
             else
             {
-                ctx.BulkInsert(MetaDataFunctions.GetMenus(), bulkConfig2);
+                ctx.Menus.AddRange(MetaDataFunctions.GetMenus());
+                //ctx.BulkInsert(MetaDataFunctions.GetMenus(), bulkConfig2);
             }
-            progress.WriteProgressBar(c / (float)9); c++;
+            progress.WriteProgressBar(c / nTables); c++;
+            ctx.SaveChanges();
+
+            if (ctx.MenuItems.Any())
+            {
+                ctx.MenuItems.UpdateRange(MetaDataFunctions.GetMenuItems());
+                //ctx.BulkInsertOrUpdate(MetaDataFunctions.GetMenus(), bulkConfig2);
+            }
+            else
+            {
+                ctx.MenuItems.AddRange(MetaDataFunctions.GetMenuItems());
+                //ctx.BulkInsert(MetaDataFunctions.GetMenus(), bulkConfig2);
+            }
+            progress.WriteProgressBar(c / nTables); c++;
+            ctx.SaveChanges();
 
             if (ctx.UserStarters.Any())
             {
-                ctx.BulkInsertOrUpdate(MetaDataFunctions.GetUserStarters(), bulkConfig);
+
+                ctx.UserStarters.UpdateRange(MetaDataFunctions.GetUserStarters());
+                //ctx.BulkInsertOrUpdate(MetaDataFunctions.GetUserStarters(), bulkConfig);
             }
             else
             {
-                ctx.BulkInsert(MetaDataFunctions.GetUserStarters(), bulkConfig);
+                ctx.UserStarters.AddRange(MetaDataFunctions.GetUserStarters());
+                //ctx.BulkInsert(MetaDataFunctions.GetUserStarters(), bulkConfig);
             }
             progress.WriteProgressBar(1);
+            ctx.SaveChanges();
 
 
         }

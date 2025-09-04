@@ -39,6 +39,8 @@ public partial class Proton2Context : DbContext
 
     public virtual DbSet<Menu> Menus { get; set; }
 
+    public virtual DbSet<MenuItem> MenuItems { get; set; }
+
     public virtual DbSet<Table> Tables { get; set; }
 
     public virtual DbSet<UserStarter> UserStarters { get; set; }
@@ -65,17 +67,20 @@ public partial class Proton2Context : DbContext
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         => optionsBuilder.UseSqlServer(
-                  Utilities.ConfigurationManager.AppSettings.SQLConnectionString()
+                  Utilities.ConfigurationManager.AppSettings.SQLConnectionString(false)
             )
             .UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
         
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        Console.WriteLine("creating database");
+
         foreach (var relationship in modelBuilder.Model.GetEntityTypes().SelectMany(e => e.GetForeignKeys()))
         {
             relationship.DeleteBehavior = DeleteBehavior.Restrict;
         }
 
+      
         var valueDate = modelBuilder.Entity<ValueDate>();
         valueDate.Property(f => f.Value).HasColumnType(nameof(SqlDbType.Date));
 

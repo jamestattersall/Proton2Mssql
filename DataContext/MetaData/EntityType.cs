@@ -21,10 +21,4 @@ public partial class EntityType
 
     public short IdAttributeId { get; set; }
 
-    [ForeignKey(nameof(IdLineViewId))]
-    public virtual View? IdLineView { get; set; }
-
-    public virtual ICollection<Menu> Menus { get; set; } =  [];
-
-    public virtual ICollection<DataContext.IndexType> IndexTypes { get; set; } = [];
 }

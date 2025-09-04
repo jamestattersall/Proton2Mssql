@@ -19,7 +19,4 @@ public partial class ViewAttribute
 
     public byte Y { get; init; } 
 
-    public virtual Attribute? Attribute { get; set; } 
-
-    public virtual View? View { get; set; } 
 }

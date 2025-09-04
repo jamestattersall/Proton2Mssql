@@ -18,6 +18,5 @@ public partial class Lookup
     [Column(TypeName = "char(5)")]
     public string? Code { get; set; }
 
-    public virtual LookupType? LookupType { get; set; }
 
 }
