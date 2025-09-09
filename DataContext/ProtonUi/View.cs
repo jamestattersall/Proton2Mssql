@@ -21,4 +21,6 @@ public partial class View
 
     public short EntityTypeId { get; set; }
 
+    public virtual EntityType EntityType { get; set; }
+
  }

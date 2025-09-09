@@ -18,4 +18,7 @@ public partial class Index
    
     public int EntityId { get; set; }
 
+    public IndexType IndexType { get; set; }
+    public Entity Entity { get; set; }
+
 }   

@@ -27,5 +27,7 @@ namespace ProtonConsole2.DataContext.ProtonUi
         public short Parameter3 { get; set; }
         public short Parameter4 { get; set; }
 
+        public virtual Menu Menu { get; set; }
+
     }
 }

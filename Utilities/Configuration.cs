@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using ProtonConsole2.Proton;
+using Serilog;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -129,6 +130,47 @@ namespace ProtonConsole2.Utilities
             Questioner.EditSettings();
         }
 
+        public static void SetPathToLog()
+        {
+            int trycount = 0; ;
+            while (trycount < 4)
+            {
+                string? path = Questioner.GetStringResponse("Enter directory to store log files: ", AppSettings.PathToLogs);
+                if (path.IsNullOrEmpty())
+                {
+                    var toExit = Questioner.GetBoolResponse("Continue without saving?", false);
+                    if (toExit != null || toExit == true)
+                    {
+                        trycount = 10;
+                    }
+                }
+                else
+                {
+                    if (System.IO.Directory.Exists(path))
+                    {
+                        if (path.Contains("/") && !path.EndsWith("/")) path += "/";
+                        if (path.Contains(@"\") && !path.EndsWith(@"\")) path += @"\";
+
+                        AppSettings.PathToLogs = path!;
+                        SaveSettings();
+                        trycount = 10;
+                        Log.Logger = new LoggerConfiguration()
+                             .MinimumLevel.Debug()
+                             .WriteTo.Console()
+                             .WriteTo.File(ConfigurationManager.AppSettings.PathToLogs + "AppLog.txt", rollingInterval: RollingInterval.Day)
+                             .CreateLogger();
+
+                    }
+                    else
+                    {
+                        Console.WriteLine("Directory not found");
+                    }
+                }
+                trycount++;
+            }
+            Questioner.EditSettings();
+        }
+
         public static void SetDbServer()
         {
 
@@ -217,6 +259,7 @@ namespace ProtonConsole2.Utilities
         public  string DBPassword { get; set; } = string.Empty;
         public  bool DBIsIntegrated { get; set; } = false;
         public string PathToProtonFolder { get; set; } = string.Empty;
+        public string PathToLogs { get; set; } = string.Empty;
         public  DateTime LastUpdate { get; set; } = DateTime.MinValue;
 
         public string SQLConnectionString(bool isDefault = false)
@@ -255,10 +298,14 @@ namespace ProtonConsole2.Utilities
         {
             return (File.Exists(PathToProtonFolder + "BASE.dbs"));
         }
+        public bool TestPathToLogs()
+        {
+            return (Path.Exists(PathToLogs ));
+        }
 
         public bool IsValid()
         {
-            return TestPathToProton() && TestConnection(true);
+            return TestPathToProton() && TestPathToLogs() && TestConnection(true);
         }
     }
 }

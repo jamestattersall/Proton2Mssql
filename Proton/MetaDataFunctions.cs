@@ -309,10 +309,7 @@ namespace ProtonConsole2.Proton
             }
 
             return list;
-
         }
-
-
 
         public static List<LookupType> GetLookupTypes()
         {
@@ -334,8 +331,6 @@ namespace ProtonConsole2.Proton
                 }
 
             }
-
-
             return codes;
         }
 
@@ -536,6 +531,4 @@ namespace ProtonConsole2.Proton
         }
 
     }
-
-
 }

@@ -14,5 +14,8 @@ public partial class Menu
     [Column(TypeName = "varchar(255)")]
     public string Name { get; set; }
 
+    public short EntityTypeId { get; set; }   
+
+    public virtual EntityType EntityType { get; set; }
 
 }

@@ -16,7 +16,8 @@ public abstract class ValueBase(int entityId, short attributeId, short seq)
     //row ordinal number
     public short Seq { get; set; } = seq;
 
-    public virtual Entity Entity { get; set; } = null!;
+    public virtual  Entity Entity { get; set; } 
+    public virtual  Attribute Attribute { get; set; } 
 }
 
 [Index(nameof(Value), AllDescending = true)]

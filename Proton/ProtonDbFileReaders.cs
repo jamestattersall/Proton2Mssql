@@ -657,12 +657,12 @@ namespace ProtonConsole2.Proton
                     Ptr += BlockLength;
                     if (SetBlockData()) return true;
                 }
-                var oldInstanceId = EntityId;
+                var oldEntityId = EntityId;
                 if (MoveToNextPage())
                 {
-                    if (oldInstanceId != EntityId)
+                    if (oldEntityId != EntityId)
                     {
-                        throw new Exception("data chain error");
+                        throw new Exception($"New page:{PagePtr} has inorrect Entity:{EntityId}, should be{oldEntityId}");
                     }
                     return true;
                 }

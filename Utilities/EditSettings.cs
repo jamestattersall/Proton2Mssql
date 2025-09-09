@@ -1,13 +1,16 @@
 ﻿using Microsoft.IdentityModel.Tokens;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Net.NetworkInformation;
-using System.Configuration;
 using ProtonConsole2.DataContext;
 using ProtonConsole2.Proton;
+using ProtonConsole2.protonToSql;
+using ProtonConsole2.ProtonToSql;
+using Serilog;
+using System;
+using System.Collections.Generic;
+using System.Configuration;
+using System.Linq;
+using System.Net.NetworkInformation;
+using System.Text;
+using System.Threading.Tasks;
 
 namespace ProtonConsole2.Utilities
 {
@@ -37,6 +40,7 @@ namespace ProtonConsole2.Utilities
             }
             return null;
         }
+
         public static string? GetStringResponse(string caption, string defaultValue = "")
         {
             Console.WriteLine(caption);
@@ -44,44 +48,9 @@ namespace ProtonConsole2.Utilities
             return  Console.ReadLine();
         }
 
-        public static void HomeEdit()
+       
+        public static void EditSettings() 
         {
-            Console.Clear();
-            Console.WriteLine("[1]  Edit settings,");
-            Console.WriteLine("[2]  Load/update metadata,");
-            Console.WriteLine("[3]  Load/update entity data,");
-            Console.WriteLine("[0]  Exit");
-            using Proton2Context ctx = new();
-            int? optn = null;
-            while (optn != 0)
-            {
-
-                optn = Questioner.GetIntResponse("Choose option 0-5:");
-                switch (optn)
-                {
-                    case 1:
-                        Questioner.EditSettings();
-                        break;
-                    case 2:
-
-                        if (ConfigurationManager.AppSettings.TestConnection())
-                        {
-                            ProtonToSql.SqlLoader.LoadMetadata();
-                            ProtonToSql.SqlLoader.LoadIndexes();
-                        }
-                        
-                        break;
-                    case 3:
-                        ProtonToSql.SqlLoader.LoadEntityInstances(200); 
-                        break;
-                    case 0:
-                        break;
-                }
-            }
-            return;
-        }
-       public static void EditSettings() 
-       {
             var apsettings = ConfigurationManager.AppSettings;
             string capt;
             Console.Clear();
@@ -90,14 +59,16 @@ namespace ProtonConsole2.Utilities
             Console.WriteLine("[3] DB integrated security: " + apsettings.DBIsIntegrated.ToString());
             Console.WriteLine("[4] DB Password: ");
             Console.WriteLine("[5] Proton.dbs files directory: " + apsettings.PathToProtonFolder);
-            if(apsettings.IsValid())
+            Console.WriteLine("[6] Log files directory: " + apsettings.PathToLogs);
+
+            if (apsettings.IsValid())
             {
                 using Proton2Context ctx = new();
-                Console.WriteLine("[6] Load/update metadata...");
-                Console.WriteLine("[7] Load/update entity data...");
-                capt = "Enter number 0-7;";
+                Console.WriteLine("[7] Load/update metadata...");
+                Console.WriteLine("[8] Load/update entity data...");
+                capt = "Enter number 0-8;";
             }
-            else capt = "Enter number 0-5;";
+            else capt = "Enter number 0-6;";
             Console.WriteLine("[0] Exit");
             int? opt = null;
             while (opt != 0)
@@ -123,17 +94,39 @@ namespace ProtonConsole2.Utilities
                         break;
 
                     case 6:
+                        ConfigurationManager.SetPathToLog();
+                        break;
+
+                    case 7:
 
                         if (apsettings.IsValid())
                         {
-                            ProtonToSql.SqlLoader.LoadMetadata();
-                            ProtonToSql.SqlLoader.LoadIndexes();
+                            Log.Logger = new LoggerConfiguration()
+                                .MinimumLevel.Debug()
+                                .WriteTo.Console()
+                                .WriteTo.File(ConfigurationManager.AppSettings.PathToLogs + "AppLog.txt", rollingInterval: RollingInterval.Day)
+                                .CreateLogger();
+
+                            MetadataLoader.LoadMetadata();
+                            EntityLoader.LoadLookups(1000);
+                            EntityLoader.LoadEntities(1000);
+                            EntityLoader.LoadIndexes(1000);
+                            EntityLoader.UpdateEntityNames();
+                            // ProtonToSql.SqlLoader.LoadIndexes();
                         }
                         break;
-                    case 7:
+                    case 8:
                         if (apsettings.IsValid())
                         {
-                            ProtonToSql.SqlLoader.LoadEntityInstances(200);
+                            //ProtonToSql.SqlLoader.LoadEntityInstances(200);
+                            Log.Logger = new LoggerConfiguration()
+                                .MinimumLevel.Debug()
+                                .WriteTo.Console()
+                                .WriteTo.File(ConfigurationManager.AppSettings.PathToLogs + "AppLog.txt", rollingInterval: RollingInterval.Day)
+                                .CreateLogger();
+
+                            using ValuesLoader dsl = new();
+                            dsl.LoadValues(1000);
                         }
                         break;
 
@@ -141,7 +134,6 @@ namespace ProtonConsole2.Utilities
                         break;
                 }
             }
-           
-       }
+        }
     }
 }

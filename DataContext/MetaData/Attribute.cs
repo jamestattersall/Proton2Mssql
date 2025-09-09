@@ -23,6 +23,9 @@ public class Attribute
 
     public short? DisplayLength { get; set; } 
 
+    public virtual  EntityType EntityType { get; set; }
+
+    public virtual  DataType DataType { get; set; }
 }
 
 public enum DataTypes

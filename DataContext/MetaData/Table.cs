@@ -17,4 +17,6 @@ public partial class Table
 
     public short DateAttributeId { get; set; }
 
+    public virtual  EntityType EntityType { get; set; }
+
 }
