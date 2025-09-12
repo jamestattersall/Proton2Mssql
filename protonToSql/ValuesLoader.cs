@@ -46,7 +46,12 @@ namespace ProtonConsole2.protonToSql
             using Proton.Valid valid = new();
             for (int i = 1; i <= item.NPages; i++)
             {
-                if (item.MoveToPage(i) && item.IsInstalled && !item.IsCalculated && item.DataType > 0)
+                if (item.MoveToPage(i) && 
+                    item.IsInstalled && 
+                    !item.IsCalculated && 
+                    item.DataType > 0 &&
+                    !Utilities.ConfigurationManager.AppSettings.ExcludeItems.Contains(i)
+                    )
                 {
                     var qual = false;
                     var mod = false;
@@ -508,7 +513,7 @@ namespace ProtonConsole2.protonToSql
                     bool success = false;
                     try
                     {
-                        success = LoadDataset(i);
+                        success = LoadDataset(i,true);
                         ValuesDs.Merge(EntityDs);
                        // ValuesDs.Clear();
                     }

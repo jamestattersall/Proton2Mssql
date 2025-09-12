@@ -1,5 +1,7 @@
 ﻿
+using Serilog;
 using System.Buffers.Binary;
+using System.ComponentModel.DataAnnotations;
 using System.Diagnostics.Metrics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -658,11 +660,13 @@ namespace ProtonConsole2.Proton
                     if (SetBlockData()) return true;
                 }
                 var oldEntityId = EntityId;
-                if (MoveToNextPage())
+                var oldItemId=_currentItemId;
+                if (NextPageId > 0  && MoveToNextPage())
                 {
                     if (oldEntityId != EntityId)
                     {
-                        throw new Exception($"New page:{PagePtr} has inorrect Entity:{EntityId}, should be{oldEntityId}");
+                        Log.Warning($"Broken page chain for entity{oldEntityId}.Next page in chain is for different entity {EntityId}");
+                        return MoveToNextValidPage(oldEntityId, oldItemId);
                     }
                     return true;
                 }
@@ -673,6 +677,37 @@ namespace ProtonConsole2.Proton
             _counter--;
 
             return true;
+        }
+
+        private bool MoveToNextValidPage(int entityId, int itemId )
+        {
+            if (itemId < 1)
+            {
+                throw new Exception($"invalid item {itemId}");
+            }
+            Log.Warning($"Attempting to find next valid page.");
+            int found = int.MaxValue;
+            int page = 0;
+            //check every page in data.dbs.
+            for (int i = 1; i <= NPages; i++)
+            {
+                if (MoveToPage(i) && EntityId == entityId)
+                {
+                    short hiitemid = HighItemId;
+                    if( hiitemid > itemId && (hiitemid + _currentItemId) < found && _currentItemId != hiitemid)
+                    {
+                        found = hiitemid + _currentItemId;
+                        page = i;
+                    }
+                }
+            }
+            if (page > 0 && MoveToPage(page))
+            {
+                Log.Warning($"Found valid page. It is possible that some data for item {itemId} has not been imported.");
+                return true;
+            }
+            Log.Warning($"No valid page found. It is possible that data for item at or above {itemId} has not been imported.");
+            return false;
         }
 
         public override bool MoveToPage(int pagePtr)
@@ -689,8 +724,7 @@ namespace ProtonConsole2.Proton
         private bool MoveToNextPage()
         {
             var np = NextPageId;
-            if (np != 0) return MoveToPage(np);
-            else return false;
+            return (np != 0 && MoveToPage(np));
         }
 
         private bool SetBlockData()

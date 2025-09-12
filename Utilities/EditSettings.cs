@@ -6,6 +6,7 @@ using ProtonConsole2.ProtonToSql;
 using Serilog;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Configuration;
 using System.Linq;
 using System.Net.NetworkInformation;
@@ -60,12 +61,13 @@ namespace ProtonConsole2.Utilities
             Console.WriteLine("[4] DB Password: ");
             Console.WriteLine("[5] Proton.dbs files directory: " + apsettings.PathToProtonFolder);
             Console.WriteLine("[6] Log files directory: " + apsettings.PathToLogs);
+            Console.WriteLine("[7] Items to exclude: " + string.Join(',',apsettings.ExcludeItems.ConvertAll(o => o.ToString()).ToArray()));
 
             if (apsettings.IsValid())
             {
                 using Proton2Context ctx = new();
-                Console.WriteLine("[7] Load/update metadata...");
-                Console.WriteLine("[8] Load/update entity data...");
+                Console.WriteLine("[8] Load/update metadata...");
+                Console.WriteLine("[9] Load/update entity data...");
                 capt = "Enter number 0-8;";
             }
             else capt = "Enter number 0-6;";
@@ -98,6 +100,10 @@ namespace ProtonConsole2.Utilities
                         break;
 
                     case 7:
+                        ConfigurationManager.SetExcludeItems();
+                        break;
+
+                    case 8:
 
                         if (apsettings.IsValid())
                         {
@@ -115,7 +121,9 @@ namespace ProtonConsole2.Utilities
                             // ProtonToSql.SqlLoader.LoadIndexes();
                         }
                         break;
-                    case 8:
+
+
+                    case 9:
                         if (apsettings.IsValid())
                         {
                             //ProtonToSql.SqlLoader.LoadEntityInstances(200);

@@ -130,6 +130,27 @@ namespace ProtonConsole2.Utilities
             Questioner.EditSettings();
         }
 
+        public static void SetExcludeItems()
+        {
+            string? res = Questioner.GetStringResponse("Enter items to ignore: ", string.Join(',', AppSettings.ExcludeItems.ConvertAll(o => o.ToString()).ToArray()));
+
+            if (res != null) {
+                AppSettings.ExcludeItems.Clear();
+
+                var arry=res.Split(',').ToList();
+                foreach (string item in arry)
+                {
+                    int i;
+                    if(int.TryParse(item, out i))
+                    {
+                        AppSettings.ExcludeItems.Add(i);
+                    }
+                }
+                SaveSettings();
+            }
+            Questioner.EditSettings();
+        }
+
         public static void SetPathToLog()
         {
             int trycount = 0; ;
@@ -260,7 +281,9 @@ namespace ProtonConsole2.Utilities
         public  bool DBIsIntegrated { get; set; } = false;
         public string PathToProtonFolder { get; set; } = string.Empty;
         public string PathToLogs { get; set; } = string.Empty;
+        public List<int> ExcludeItems { get; set; } = [];
         public  DateTime LastUpdate { get; set; } = DateTime.MinValue;
+
 
         public string SQLConnectionString(bool isDefault = false)
         {

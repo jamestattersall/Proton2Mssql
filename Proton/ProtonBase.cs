@@ -87,7 +87,7 @@ namespace ProtonConsole2.Proton
 
         public bool ExamineBit(int offset, int index) => (PageMemory.Span[offset] & (1 << (index - 1))) != 0x0;
 
-        public bool PageIsValid => PageMemory.Length > 0 && PageMemory.Span.ContainsAnyExcept(NULL);
+        public bool PageIsValid => PageMemory.Length > 0 && PageMemory.Span.ContainsAnyExcept(NULL, (byte)0);
 
         protected long FileLength { get; private set; }
 
