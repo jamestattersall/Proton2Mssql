@@ -17,10 +17,10 @@ namespace ProtonConsole2.protonToSql
         private DataSet EntityDs;
         static readonly Dictionary<int, AttributeFn?> AttributeFns = [];
 
-        private  Vrx vrx = new();
+        private Vrx vrx = new();
         private Patsts patsts = new();
-        private  Data data = new();
-        private  FrText frText = new();
+        private Data data = new();
+        private FrText frText = new();
 
         public struct ValueIndex
         {
@@ -29,8 +29,8 @@ namespace ProtonConsole2.protonToSql
             public short Seq { get; set; }
         }
 
-        public int NEntities { get; private set; }
-        public int NDataPages { get; private set; }
+        public long NEntities { get; private set; }
+        public long NDataPages { get; private set; }
         public int DataPageCount => data.PageCounter;
 
 
@@ -46,9 +46,9 @@ namespace ProtonConsole2.protonToSql
             using Proton.Valid valid = new();
             for (int i = 1; i <= item.NPages; i++)
             {
-                if (item.MoveToPage(i) && 
-                    item.IsInstalled && 
-                    !item.IsCalculated && 
+                if (item.MoveToPage(i) &&
+                    item.IsInstalled &&
+                    !item.IsCalculated &&
                     item.DataType > 0 &&
                     !Utilities.ConfigurationManager.AppSettings.ExcludeItems.Contains(i)
                     )
@@ -164,13 +164,14 @@ namespace ProtonConsole2.protonToSql
 
             return m;
         }
-  
-        public bool LoadDataset(int entityId, bool suppressOrdinalError = false, DateTime? ifUpdatedSince = null)
+
+
+        public bool LoadDataset(int entityId, DateTime? ifUpdatedSince = null)
         {
             EntityDs.Clear();
-            if (vrx.MoveToPage(entityId) && 
-                patsts.MoveToPage(entityId) && 
-                (ifUpdatedSince == null || ifUpdatedSince<patsts.Updated))
+            if (vrx.MoveToPage(entityId) &&
+                patsts.MoveToPage(entityId) &&
+                (ifUpdatedSince == null || ifUpdatedSince < patsts.Updated))
             {
                 ValueIndex valueIndex = new() { EntityId = entityId };
 
@@ -180,24 +181,31 @@ namespace ProtonConsole2.protonToSql
                     valueIndex.AttributeId = 0;
                     AttributeFn? fn = null;
                     bool blockIsValid = true;
-                    while (blockIsValid && data.ItemId>0)
+                    short skippedAttributeId = 0;
+                    while (blockIsValid && data.ItemId > 0)
                     {
                         var newAttributeId = data.ItemId;
                         valueIndex.Seq = data.Seq;
-                        if (newAttributeId > valueIndex.AttributeId) { 
+                        if (newAttributeId > valueIndex.AttributeId)
+                        {
                             valueIndex.AttributeId = newAttributeId;
                             fn = AttributeFns.GetValueOrDefault(valueIndex.AttributeId);
-                        } else if (newAttributeId < valueIndex.AttributeId)
-                        {
-                            if (suppressOrdinalError)
-                            {
-                                fn = null;
-
-                                Log.Warning($"Items not in ascending order. New={newAttributeId} Old:{valueIndex.AttributeId}, patient:{entityId}, skipping to next readble data;");
-                               
-                            } else  throw new Exception($"Items not in ascending order. New={newAttributeId} Old:{valueIndex.AttributeId}, patient:{entityId}" );
                         }
-                            
+                        else if (newAttributeId < valueIndex.AttributeId)
+                        {
+                            fn = null;
+                            if (skippedAttributeId == 0)
+                            {
+                                Log.Warning($"Items not in ascending order. Entity:{entityId}, any values for item {valueIndex.AttributeId} with rows higher than {valueIndex.Seq} will not be imported. ");
+
+                            }
+                            if (skippedAttributeId != newAttributeId)
+                            {
+                                skippedAttributeId = newAttributeId;
+                                Log.Warning($"Skipping item {newAttributeId}.");
+                            }
+                        }
+
                         if (fn != null && !data.RawValue.IsEmpty)
                         {
                             fn.Action!(valueIndex, data.RawValue, fn.SubtypeId);
@@ -210,61 +218,7 @@ namespace ProtonConsole2.protonToSql
             return false;
         }
 
-
-        public bool LoadDataset2(int entityId, bool suppressOrdinalError = false, DateTime? ifUpdatedSince = null)
-        {
-            EntityDs.Clear();
-            if (vrx.MoveToPage(entityId) &&
-                patsts.MoveToPage(entityId) &&
-                (ifUpdatedSince == null || ifUpdatedSince < patsts.Updated))
-            {
-                ValueIndex valueIndex = new() { EntityId = entityId };
-                while (vrx.MoveToNextBlock())
-                {
-                    var start = vrx.DataPageId;
-                    var maxItemId = vrx.MaxItemId;
-                    if (data.MoveToPage(start))
-                    {
-                        valueIndex.AttributeId = 0;
-                        AttributeFn? fn = null;
-                        bool blockIsValid = true;
-                        while (blockIsValid && data.ItemId <= maxItemId)
-                        {
-                            var newAttributeId = data.ItemId;
-                            valueIndex.Seq = data.Seq;
-
-                            if (newAttributeId > valueIndex.AttributeId)
-                            {
-                                valueIndex.AttributeId = newAttributeId;
-                                fn = AttributeFns.GetValueOrDefault(valueIndex.AttributeId);
-                            }
-                            else if (newAttributeId < valueIndex.AttributeId)
-                            {
-                                if (suppressOrdinalError)
-                                {
-                                    fn = null;
-
-                                    Log.Warning($"Items not in ascending order. New={newAttributeId} Old:{valueIndex.AttributeId}, patient:{entityId}, skipping to next readble data;");
-
-                                }
-                                else throw new Exception($"Items not in ascending order. New={newAttributeId} Old:{valueIndex.AttributeId}, patient:{entityId}");
-                            }
-
-
-                            if (fn != null && !data.RawValue.IsEmpty)
-                            {
-                                fn.Action!(valueIndex, data.RawValue, fn.SubtypeId);
-                            }
-                            blockIsValid = data.MoveToNextBlock();
-                        }
-                        return true;
-                    }
-
-                }
-               
-            }
-            return false;
-        }
+  
 
 
         private class AttributeFn
@@ -273,42 +227,42 @@ namespace ProtonConsole2.protonToSql
             public Action<ValueIndex, ReadOnlyMemory<byte>, short>? Action { get; set; }
         }
 
-        private void ProcessString( ValueIndex valueIndex, ReadOnlyMemory<byte> data, short p = 0)
+        private void ProcessString(ValueIndex valueIndex, ReadOnlyMemory<byte> data, short p = 0)
         {
             EntityDs.Tables[(int)ValueTable.ValueTexts].Rows.Add(valueIndex.EntityId, valueIndex.AttributeId, valueIndex.Seq, ProtonDbFileReader.GetString(data));
         }
 
-        private  void ProcessUint8( ValueIndex valueIndex, ReadOnlyMemory<byte> data, short p = 0)
+        private void ProcessUint8(ValueIndex valueIndex, ReadOnlyMemory<byte> data, short p = 0)
         {
             EntityDs.Tables[(int)ValueTable.ValueNumbers].Rows.Add(valueIndex.EntityId, valueIndex.AttributeId, valueIndex.Seq, data.Span[0]);
         }
 
-        private void ProcessInt8( ValueIndex valueIndex, ReadOnlyMemory<byte> data, short p = 0)
+        private void ProcessInt8(ValueIndex valueIndex, ReadOnlyMemory<byte> data, short p = 0)
         {
-            EntityDs.Tables[(int)ValueTable.ValueNumbers].Rows.Add(valueIndex.EntityId, valueIndex.AttributeId, valueIndex.Seq, ProtonDbFileReader.GetUInt8(data.Slice(0,1)));
+            EntityDs.Tables[(int)ValueTable.ValueNumbers].Rows.Add(valueIndex.EntityId, valueIndex.AttributeId, valueIndex.Seq, ProtonDbFileReader.GetUInt8(data.Slice(0, 1)));
         }
 
-        private void ProcessUint16( ValueIndex valueIndex, ReadOnlyMemory<byte> data, short p = 0)
+        private void ProcessUint16(ValueIndex valueIndex, ReadOnlyMemory<byte> data, short p = 0)
         {
             EntityDs.Tables[(int)ValueTable.ValueNumbers].Rows.Add(valueIndex.EntityId, valueIndex.AttributeId, valueIndex.Seq, ProtonDbFileReader.GetUInt16(GetMemory(data, 2)));
         }
 
-        private void ProcessInt16( ValueIndex valueIndex, ReadOnlyMemory<byte> data, short p = 0)
+        private void ProcessInt16(ValueIndex valueIndex, ReadOnlyMemory<byte> data, short p = 0)
         {
             EntityDs.Tables[(int)ValueTable.ValueNumbers].Rows.Add(valueIndex.EntityId, valueIndex.AttributeId, valueIndex.Seq, ProtonDbFileReader.GetInt16(GetMemory(data, 2)));
         }
 
-        private void ProcessUint32( ValueIndex valueIndex, ReadOnlyMemory<byte> data, short p = 0)
+        private void ProcessUint32(ValueIndex valueIndex, ReadOnlyMemory<byte> data, short p = 0)
         {
             EntityDs.Tables[(int)ValueTable.ValueNumbers].Rows.Add(valueIndex.EntityId, valueIndex.AttributeId, valueIndex.Seq, ProtonDbFileReader.GetUInt32(GetMemory(data, 4)));
         }
 
-        private void ProcessInt32( ValueIndex valueIndex, ReadOnlyMemory<byte> data, short p = 0)
+        private void ProcessInt32(ValueIndex valueIndex, ReadOnlyMemory<byte> data, short p = 0)
         {
             EntityDs.Tables[(int)ValueTable.ValueNumbers].Rows.Add(valueIndex.EntityId, valueIndex.AttributeId, valueIndex.Seq, ProtonDbFileReader.GetInt32(GetMemory(data, 4)));
         }
 
-        private bool CheckFloat(float res, ValueIndex valueIndex )
+        private bool CheckFloat(float res, ValueIndex valueIndex)
         {
             if (!float.IsFinite(res))
             {
@@ -318,9 +272,9 @@ namespace ProtonConsole2.protonToSql
             return true;
         }
 
-        private void ProcessSingle( ValueIndex valueIndex, ReadOnlyMemory<byte> data, short subTypeId)
+        private void ProcessSingle(ValueIndex valueIndex, ReadOnlyMemory<byte> data, short subTypeId)
         {
-           
+
             var res = ProtonDbFileReader.GetSingle(GetMemory(data, 4));
             if (CheckFloat(res, valueIndex))
             {
@@ -328,13 +282,13 @@ namespace ProtonConsole2.protonToSql
             }
         }
 
-        private void ProcessDouble( ValueIndex valueIndex, ReadOnlyMemory<byte> data, short subTypeId)
+        private void ProcessDouble(ValueIndex valueIndex, ReadOnlyMemory<byte> data, short subTypeId)
         {
             var res = ProtonDbFileReader.GetDouble(GetMemory(data, 8));
             if (CheckFloat(res, valueIndex))
             {
                 EntityDs.Tables[(int)ValueTable.ValueNumbers].Rows.Add(valueIndex.EntityId, valueIndex.AttributeId, valueIndex.Seq, res);
-            }  
+            }
         }
 
         private void ProcessCompositeSingle(ValueIndex valueIndex, ReadOnlyMemory<byte> data, short subTypeId)
@@ -350,7 +304,7 @@ namespace ProtonConsole2.protonToSql
             }
         }
 
-        private void ProcessCompositeDouble( ValueIndex valueIndex, ReadOnlyMemory<byte> data, short subTypeId)
+        private void ProcessCompositeDouble(ValueIndex valueIndex, ReadOnlyMemory<byte> data, short subTypeId)
         {
             var com = GetCompositeDouble(data);
 
@@ -364,7 +318,7 @@ namespace ProtonConsole2.protonToSql
             }
         }
 
-        private void ProcessDict( ValueIndex valueIndex, ReadOnlyMemory<byte> data, short p = 0)
+        private void ProcessDict(ValueIndex valueIndex, ReadOnlyMemory<byte> data, short p = 0)
         {
             var id = ProtonDbFileReader.GetUInt16(GetMemory(data, 2));
             if (id > 0)
@@ -382,7 +336,7 @@ namespace ProtonConsole2.protonToSql
             }
         }
 
-        private void ProcessDate( ValueIndex valueIndex, ReadOnlyMemory<byte> data, short p = 0)
+        private void ProcessDate(ValueIndex valueIndex, ReadOnlyMemory<byte> data, short p = 0)
         {
             var dt = ProtonDbFileReader.GetUInt16(GetMemory(data, 2));
             if (dt > 0)
@@ -404,7 +358,7 @@ namespace ProtonConsole2.protonToSql
             }
         }
 
-        private  void ProcessFreeText(ValueIndex valueIndex, ReadOnlyMemory<byte> data, short p = 0)
+        private void ProcessFreeText(ValueIndex valueIndex, ReadOnlyMemory<byte> data, short p = 0)
         {
             var id = ProtonDbFileReader.GetInt32(GetMemory(data, 4));
             if (id > 0 && frText.MoveToPage(id))
@@ -416,7 +370,7 @@ namespace ProtonConsole2.protonToSql
             }
         }
 
-        private void ProcessEntityPtr( ValueIndex valueIndex, ReadOnlyMemory<byte> data, short subTypeId)
+        private void ProcessEntityPtr(ValueIndex valueIndex, ReadOnlyMemory<byte> data, short subTypeId)
         {
             var key = ProtonDbFileReader.GetString(data);
             using IndexReader ih = new();
@@ -449,7 +403,7 @@ namespace ProtonConsole2.protonToSql
                     }
                 }
             }
-            cf.Number=ProtonDbFileReader.GetSingle(GetMemory(data, 4));
+            cf.Number = ProtonDbFileReader.GetSingle(GetMemory(data, 4));
             return cf;
         }
 
@@ -491,57 +445,59 @@ namespace ProtonConsole2.protonToSql
             var st = Stopwatch.StartNew();
             ValuesDs.Clear();
 
+            int counter = 0;
+
             using Proton2Context ctx = new();
             ctx.Database.ExecuteSql($"EXEC sp_msforeachtable 'ALTER TABLE ? NOCHECK CONSTRAINT ALL'");
-            
-            
+
+
             Console.WriteLine($"Loading values for {vrx.NPages} entities..");
             var prog = new Utilities.Progress(20);
             prog.WriteProgressBar(0);
 
-                    
-            using SqlBulkCopy bkc = new(Utilities.ConfigurationManager.AppSettings.SQLConnectionString(), 
-                SqlBulkCopyOptions.TableLock & SqlBulkCopyOptions.KeepIdentity) { 
-            BatchSize = nRows
-            };
-            
 
-            for (int i = 1; i <= vrx.NPages; i++) 
+            using SqlBulkCopy bkc = new(Utilities.ConfigurationManager.AppSettings.SQLConnectionString(),
+                SqlBulkCopyOptions.TableLock & SqlBulkCopyOptions.KeepIdentity)
             {
-                if (vrx.MoveToPage(i))
-                {
-                    bool success = false;
-                    try
-                    {
-                        success = LoadDataset(i,true);
-                        ValuesDs.Merge(EntityDs);
-                       // ValuesDs.Clear();
-                    }
-                    catch (Exception ex)
-                    {
-                        Log.Error(ex,$"Unable to load data for entity {i}");
-                    }
+                BatchSize = nRows
+            };
 
-                    if (success)
-                    {
-                        foreach (DataTable tbl in ValuesDs.Tables)
-                        {
-                            if (tbl.Rows.Count > nRows)
-                            {
-                                writeToServer(tbl);
-                            }
-                        }
-                    }
-                    prog.WriteProgressBar(i / (float)vrx.NPages);
+            Func<DataTable, bool> loadFunction = Utilities.ConfigurationManager.AppSettings.NoLoad ? Noload : writeToServer;
+
+            long nEntities = 0;
+
+            if (Utilities.ConfigurationManager.AppSettings.OnlyTheseEntities.Count == 0)
+            {
+                nEntities = vrx.NPages;
+                for (int i = 1; i <= nEntities; i++)
+                {
+                    Process(i);
                 }
             }
+            else
+            {
+                nEntities = Utilities.ConfigurationManager.AppSettings.OnlyTheseEntities.Count;
+                foreach (int i in Utilities.ConfigurationManager.AppSettings.OnlyTheseEntities)
+                {
+                    Process(i);
+                }
+            }
+
             foreach (DataTable tbl in ValuesDs.Tables)
             {
-               writeToServer(tbl); 
+                loadFunction(tbl);
             }
+
             prog.WriteProgressBar(1);
             st.Stop();
-            Console.WriteLine($"Loaded in {st.Elapsed:hh\\:mm\\:ss}");
+            string str = Utilities.ConfigurationManager.AppSettings.NoLoad ? "Scanned " : "Loaded ";
+            Console.WriteLine($"{str} in {st.Elapsed:hh\\:mm\\:ss}");
+
+            bool Noload(DataTable tbl)
+            {
+                tbl.Rows.Clear();
+                return true;
+            }
 
             bool writeToServer(DataTable tbl)
             {
@@ -553,7 +509,7 @@ namespace ProtonConsole2.protonToSql
                 }
                 catch (Exception ex)
                 {
-                    Log.Error(ex,$"Failed to save to table {tbl.TableName}{Environment.NewLine} first row:{tbl.Rows[0].ItemArray}, last row{tbl.Rows[tbl.Rows.Count -1].ItemArray}" );
+                    Log.Error(ex, $"Failed to save to table {tbl.TableName}{Environment.NewLine} first row:{string.Join(',',tbl.Rows[0].ItemArray.ToList().ConvertAll(o => o.ToString()).ToArray())}, last row{tbl.Rows[tbl.Rows.Count - 1].ItemArray}");
                     return false;
                 }
                 finally
@@ -561,7 +517,40 @@ namespace ProtonConsole2.protonToSql
                     tbl.Rows.Clear();
                 }
             }
+
+
+            void Process(int i)
+            {
+                counter++;
+                if (vrx.MoveToPage(i))
+                {
+                    bool success = false;
+                    try
+                    {
+                        success = LoadDataset(i);
+                        ValuesDs.Merge(EntityDs);
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Error(ex, $"Unable to load data for entity {i}");
+                    }
+
+                    if (success)
+                    {
+                        foreach (DataTable tbl in ValuesDs.Tables)
+                        {
+                            if (tbl.Rows.Count > nRows)
+                            {
+                                loadFunction(tbl);
+                            }
+                        }
+                    }
+                    prog.WriteProgressBar(counter / (float)nEntities);
+                }
+            }
         }
+
+
         private class CompositeTime
         {
             public TimeOnly Time { get; set; }
@@ -590,6 +579,8 @@ namespace ProtonConsole2.protonToSql
             patsts.Dispose();
             ValuesDs.Clear();
             ValuesDs.Dispose();
+            EntityDs.Clear();
+            EntityDs.Dispose();
         }
     }
 

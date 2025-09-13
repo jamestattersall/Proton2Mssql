@@ -62,15 +62,17 @@ namespace ProtonConsole2.Utilities
             Console.WriteLine("[5] Proton.dbs files directory: " + apsettings.PathToProtonFolder);
             Console.WriteLine("[6] Log files directory: " + apsettings.PathToLogs);
             Console.WriteLine("[7] Items to exclude: " + string.Join(',',apsettings.ExcludeItems.ConvertAll(o => o.ToString()).ToArray()));
+            Console.WriteLine("[8] Only these entities: " + string.Join(',', apsettings.OnlyTheseEntities.ConvertAll(o => o.ToString()).ToArray()));
+            Console.WriteLine("[9] Scan for errors, no import: " + apsettings.NoLoad.ToString());
 
             if (apsettings.IsValid())
             {
                 using Proton2Context ctx = new();
-                Console.WriteLine("[8] Load/update metadata...");
-                Console.WriteLine("[9] Load/update entity data...");
-                capt = "Enter number 0-8;";
+                Console.WriteLine("[10] Load/update metadata...");
+                Console.WriteLine("[11] Load/update entity data...");
+                capt = "Enter number 0-11;";
             }
-            else capt = "Enter number 0-6;";
+            else capt = "Enter number 0-9;";
             Console.WriteLine("[0] Exit");
             int? opt = null;
             while (opt != 0)
@@ -104,6 +106,15 @@ namespace ProtonConsole2.Utilities
                         break;
 
                     case 8:
+                        ConfigurationManager.SetOnlyTheseEntities();
+                        break;
+
+
+                    case 9:
+                        ConfigurationManager.SetNoLoad();
+                        break;
+
+                    case 10:
 
                         if (apsettings.IsValid())
                         {
@@ -123,7 +134,7 @@ namespace ProtonConsole2.Utilities
                         break;
 
 
-                    case 9:
+                    case 11:
                         if (apsettings.IsValid())
                         {
                             //ProtonToSql.SqlLoader.LoadEntityInstances(200);

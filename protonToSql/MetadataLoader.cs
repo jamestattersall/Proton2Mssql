@@ -136,11 +136,11 @@ namespace ProtonConsole2.ProtonToSql
 
             if (ctx.IndexTypes.Any())
             {
-               ctx.BulkInsertOrUpdate(IndexTypeReader.GetIndexTypes(), bulkConfig);
+               ctx.BulkInsertOrUpdate(MetaDataFunctions.GetIndexTypes(), bulkConfig);
             }
             else
             {
-                ctx.BulkInsert(IndexTypeReader.GetIndexTypes(), bulkConfig);
+                ctx.BulkInsert(MetaDataFunctions.GetIndexTypes(), bulkConfig);
             }
             progress.WriteProgressBar(c / nTables); c++;
             ctx.SaveChanges();

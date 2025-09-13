@@ -666,7 +666,7 @@ namespace ProtonConsole2.Proton
                     if (oldEntityId != EntityId)
                     {
                         Log.Warning($"Broken page chain for entity{oldEntityId}.Next page in chain is for different entity {EntityId}");
-                        return MoveToNextValidPage(oldEntityId, oldItemId);
+                        return MoveToNextValidPage(oldEntityId, oldItemId, Seq);
                     }
                     return true;
                 }
@@ -679,7 +679,7 @@ namespace ProtonConsole2.Proton
             return true;
         }
 
-        private bool MoveToNextValidPage(int entityId, int itemId )
+        private bool MoveToNextValidPage(int entityId, int itemId, int Seq )
         {
             if (itemId < 1)
             {
@@ -688,25 +688,38 @@ namespace ProtonConsole2.Proton
             Log.Warning($"Attempting to find next valid page.");
             int found = int.MaxValue;
             int page = 0;
+            List<int> skipped = [];
             //check every page in data.dbs.
             for (int i = 1; i <= NPages; i++)
             {
                 if (MoveToPage(i) && EntityId == entityId)
                 {
                     short hiitemid = HighItemId;
-                    if( hiitemid > itemId && (hiitemid + _currentItemId) < found && _currentItemId != hiitemid)
+                    if( hiitemid > itemId && (hiitemid + _currentItemId) < found) 
                     {
-                        found = hiitemid + _currentItemId;
-                        page = i;
+                        if(_currentItemId != hiitemid)
+                        {
+                            found = hiitemid + _currentItemId;
+                            page = i;
+                        } else
+                        {
+                            skipped.Add(hiitemid);
+                        }
                     }
                 }
             }
             if (page > 0 && MoveToPage(page))
             {
-                Log.Warning($"Found valid page. It is possible that some data for item {itemId} has not been imported.");
+                skipped=skipped.Where(i => i < _currentItemId).ToList();
+
+                Log.Warning($"Found valid page. Any values in rows higher than {Seq} for Item {itemId} have not been imported.");
+                if (skipped.Count > 0) 
+                { 
+                    Log.Warning($"Any values in any rows in items {string.Join(',', skipped.ConvertAll(v => v.ToString()).ToArray())} have not been imported.");
+                }
                 return true;
             }
-            Log.Warning($"No valid page found. It is possible that data for item at or above {itemId} has not been imported.");
+            Log.Warning($"No valid page found. Any values in rows higher than {Seq} for Item {itemId} and in all rows for items higher than {itemId} have not been imported.");
             return false;
         }
 

@@ -20,15 +20,6 @@ public partial class IndexType
 
     public short IdLineViewId { get; set; }
 
-    [NotMapped]
-    public short KeyLength { get; set; }   //required to read Index.dbs , not for SQL
-
-    [NotMapped]
-    public int StartIndexId { get; set; } // "
-
-    [NotMapped]
-    public int MiddleIndexId { get; set; }// 
-
     public virtual EntityType EntityType {get; set;}
 
 }

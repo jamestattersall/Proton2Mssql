@@ -124,6 +124,37 @@ namespace ProtonConsole2.Proton
             return list;
         }
 
+
+        public static List<IndexType> GetIndexTypes()
+        {
+            List<IndexType> list = [];
+            using Proton.IndexDef indexDef = new();
+            using Proton.KeyDef keyDef = new();
+            {
+                for (short i = 1; i <= indexDef.NPages; i++)
+                {
+                    if (indexDef.MoveToPage(i))
+                    {
+                        for (short k= 1; k<=indexDef.NPages; k++)
+                        {
+                            if(keyDef.MoveToPage(k) && keyDef.IndexDefId == i)
+                            {
+                                list.Add(new()
+                                {
+                                    Id = i,
+                                    Name = keyDef.Name,
+                                    EntityTypeId = keyDef.EntityTypeId,
+                                    IdLineViewId = indexDef.IdlineScreenId,
+                                    Prefix = keyDef.Prefix
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+            return list;
+        }
+
         public static List<DataContext.Table> GetTables()
         {
             Dictionary<short, DataContext.Table> list = [];

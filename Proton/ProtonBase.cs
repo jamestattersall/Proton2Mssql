@@ -114,6 +114,11 @@ namespace ProtonConsole2.Proton
                     //in this unlikely case, they will have been read as negative signed int, must be converted to uint. 
 
                     long filePos = (pagePtr - 1) * PageLength;//(Unsafe.As<int, uint>(ref pagePtr) - 1) * PageLength;
+                   if(filePos < 0)
+                    {
+                        bool debug = true;
+                    }
+                    
                     SetPage(filePos);
 
                     PagePtr = pagePtr;

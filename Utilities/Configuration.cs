@@ -151,6 +151,27 @@ namespace ProtonConsole2.Utilities
             Questioner.EditSettings();
         }
 
+        public static void SetOnlyTheseEntities()
+        {
+            string? res = Questioner.GetStringResponse("Enter ientities to load: ", string.Join(',', AppSettings.OnlyTheseEntities.ConvertAll(o => o.ToString()).ToArray()));
+
+            if (res != null)
+            {
+                AppSettings.OnlyTheseEntities.Clear();
+
+                var arry = res.Split(',').ToList();
+                foreach (string item in arry)
+                {
+                    int i;
+                    if (int.TryParse(item, out i))
+                    {
+                        AppSettings.OnlyTheseEntities.Add(i);
+                    }
+                }
+                SaveSettings();
+            }
+            Questioner.EditSettings();
+        }
         public static void SetPathToLog()
         {
             int trycount = 0; ;
@@ -269,6 +290,32 @@ namespace ProtonConsole2.Utilities
 
             Questioner.EditSettings();
         }
+
+        public static void SetNoLoad()
+        {
+            int trycount = 0;
+            while (trycount < 4)
+            {
+                bool? igp = Questioner.GetBoolResponse("Scan only, no load", AppSettings.NoLoad);
+                if (igp != null)
+                {
+                    AppSettings.NoLoad = (bool)igp!;
+                    SaveSettings();
+                    trycount = 10;
+                }
+                else
+                {
+                    var toExit = Questioner.GetBoolResponse("Continue without saving?", false);
+                    if (toExit != null || toExit == true)
+                    {
+                        trycount = 10;
+                    }
+                }
+                trycount++;
+            }
+
+            Questioner.EditSettings();
+        }
     }
 
     public class AppSettings
@@ -282,6 +329,8 @@ namespace ProtonConsole2.Utilities
         public string PathToProtonFolder { get; set; } = string.Empty;
         public string PathToLogs { get; set; } = string.Empty;
         public List<int> ExcludeItems { get; set; } = [];
+        public List<int> OnlyTheseEntities { get; set; } = [];
+        public bool NoLoad { get; set; } = false;
         public  DateTime LastUpdate { get; set; } = DateTime.MinValue;
 
 
