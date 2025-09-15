@@ -1,25 +1,16 @@
 ﻿
 using Serilog;
-using System.Buffers.Binary;
-using System.ComponentModel.DataAnnotations;
-using System.Diagnostics.Metrics;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
-using System.Runtime.Intrinsics.Arm;
-using System.Security.Cryptography.Pkcs;
+
 using System.Text;
 namespace ProtonConsole2.Proton
 {
-
     /// <summary>
     /// DICT.DBS one page for each DICT code (an ad-hoc list of lookup codes, created by database admin) 
     /// </summary>
     public class Dict() : ProtonDbFileReader("DICT.DBS")
     {
-        public int CodeId => -PagePtr;
-
         public string Name => GetString(0, 64);
-
     }
 
     /// <summary>
@@ -29,7 +20,6 @@ namespace ProtonConsole2.Proton
     /// </summary>
     public class RCode() : ProtonDbFileReader("CODES.DBS")
     {
-        public int CodeId => PagePtr;
 
         public string Name => GetString(0, 80);
 
@@ -45,7 +35,6 @@ namespace ProtonConsole2.Proton
     public class CodeDef() : ProtonDbFileReader("CODEDEF.DBS")
     {
         // the New (AKA READ) code types
-        public int CodeDefId => PagePtr;
 
         public string Name => GetString(64, 80);
     }
@@ -55,7 +44,6 @@ namespace ProtonConsole2.Proton
     {
         // the Proton Entities are classes (type of object) (e.g. DataAccess, GP, Equipment etc.)
         // i.e. EAV Entity Type
-        public int EntityDefId => PagePtr;
 
         public string Name => GetString(0, 16);
 
@@ -71,10 +59,9 @@ namespace ProtonConsole2.Proton
 
     public class Item() : ProtonDbFileReader("ITEM.DBS")
     {
+        //EAV attribute
 
-        public int ItemId => PagePtr;
-
-        public bool IsKeyDateItem => DateItemId == ItemId;
+        public bool IsKeyDateItem => DateItemId == (int)PagePtr;
 
         public string Name => GetString(0, 2) + "." + GetString(2, 4);
 
@@ -114,8 +101,7 @@ namespace ProtonConsole2.Proton
     {
         // one VALID.DBS page per item
         // VALID.DBS page numbers the same as ITEM.DBS
-
-        public int ItemId => PagePtr;
+        // additional data for attribute, required only for input validation.
 
         public double Max(short DataType, byte SubType)
         {
@@ -155,6 +141,8 @@ namespace ProtonConsole2.Proton
 
     public class Menu() : ProtonDbFileReaderExt("MENU.DBS", 20, 32)
     {
+        //Proton UI menus
+
         public override bool MoveToNextBlock()
         {
             if (base.MoveToNextBlock())
@@ -163,8 +151,6 @@ namespace ProtonConsole2.Proton
             }
             return false;
         }
-
-        public int MenuId => PagePtr;
 
         public string Name => GetString(0, 20);
 
@@ -193,6 +179,8 @@ namespace ProtonConsole2.Proton
     }
     public class Passwd() : ProtonDbFileReader("PASSWD.DBS")
     {
+        //passwords stored in Proton
+
         public string Password
         {
             // secret algorithm for encrypted passwords in Proton
@@ -226,7 +214,7 @@ namespace ProtonConsole2.Proton
 
     public class Base() : ProtonDbFileReader("BASE.DBS", 64)
     {
-        public int BaseId => PagePtr;
+        //Configuration required for interpretation of all .sbs files.
 
         public string Name => GetString(0, 16);
 
@@ -240,7 +228,7 @@ namespace ProtonConsole2.Proton
 
     public class IndexDef() : ProtonDbFileReader("IDXDEF.DBS")
     {
-        public int IndexDefId => PagePtr;
+        //proton UI index type configuration
 
         public byte KeyLength => (byte)(4 * ((GetUInt16(0) + 11) / 4));
 
@@ -256,7 +244,7 @@ namespace ProtonConsole2.Proton
 
     public class Index() : ProtonDbFileReaderExt("INDEX.DBS", 20)
     {
-
+        // Proton UI index
         private bool _MoveToNextBlock()
         {
             if (base.MoveToNextBlock())
@@ -315,7 +303,6 @@ namespace ProtonConsole2.Proton
             return MoveToPage(pp);
         }
 
-        public int IndexId => PagePtr;
 
         private int PreviousPageId =>  GetInt32(0);
 
@@ -341,8 +328,7 @@ namespace ProtonConsole2.Proton
     public class Screen() : ProtonDbFileReaderExt("SCREEN.DBS", 48, 10)
     {
         // All Proton Screens, one screen per page.
-        public int ScreenId => PagePtr;
-
+      
         public string Name => GetString(0, 24);
 
         public short ItemCount => GetInt16(28);
@@ -371,7 +357,6 @@ namespace ProtonConsole2.Proton
     {
         // the text (captions) displayed on screen
         // all text for screen stored in same page
-        public int ScrTxtId => PagePtr;
 
         private const byte EndOfBlockCode = 5;
         private int _validPageLength;
@@ -382,18 +367,8 @@ namespace ProtonConsole2.Proton
         // --The x or y co-ordinate could be any number including 5
 
 
+
         public override bool MoveToPage(short pagePtr)
-        {
-            if (base.MoveToPage(pagePtr))
-            {
-                _validPageLength = PageMemory.Span.LastIndexOfAnyExcept(NULL) + 1;
-                
-                SetBlockData();
-                return BlockLength > 4;
-            }
-            return false;
-        }
-        public override bool MoveToPage(int pagePtr)
         {
             if (base.MoveToPage(pagePtr))
             {
@@ -440,7 +415,7 @@ namespace ProtonConsole2.Proton
 
     public class TrGroup() : ProtonDbFileReaderExt("TRGROUP.DBS", 64, 2)
     {
-        public int TrGroupId => PagePtr;
+        //Table types, normally an EAV entity
 
         public string Name => GetString(0, 30);
 
@@ -465,8 +440,8 @@ namespace ProtonConsole2.Proton
 
     public class Patsts() : ProtonDbFileReader("PATSTS.DBS")
     {
-        public int EntityId => PagePtr;
-       
+        // EAV entity instances
+
         public DateTime Updated => GetDateTime(36).AddMilliseconds(GetUInt32(32));
 
         public uint Status => GetUInt8(1);  
@@ -475,7 +450,7 @@ namespace ProtonConsole2.Proton
 
     public class KeyDef() : ProtonDbFileReader("KEYDEF.DBS")
     {
-        public int KeyDefId => PagePtr;
+        //supporting configuration for index type, required to build index
 
         public string Name => GetString(16,   (PageLength - 16));
 
@@ -501,7 +476,7 @@ namespace ProtonConsole2.Proton
 
     public class FrText() : ProtonDbFileReader("FRTEXT.DBS")
     {
-        public int FrTextId => PagePtr;
+        //long text
 
         public int NextPageId => GetInt32(0);
 
@@ -578,7 +553,7 @@ namespace ProtonConsole2.Proton
 
     public class Vrx() : ProtonDbFileReaderExt("VRX.DBS", 0, 8)
     {
-        public int EntityId => PagePtr;
+        //internal index required to locate pages in data.dbs
 
         public override bool MoveToNextBlock()
         {
@@ -601,13 +576,13 @@ namespace ProtonConsole2.Proton
 
     public class Data() : ProtonDbFileReaderExt("DATA.DBS", 16)
     {
+        // the EAV values
+
         private ReadOnlyMemory<byte> _value;
         private const byte REPEATMASK = 0x80;
         private const byte BLOCKLENGTHMASK = 0x7F;
         private byte _counter = 0;
         private short _currentItemId = 0;
-
-        public int DataPageId => PagePtr;
 
         public int NextPageId => GetInt32(0);
 

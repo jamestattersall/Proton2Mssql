@@ -17,7 +17,7 @@ namespace ProtonConsole2.Utilities
     {
         static ConfigurationManager()
         {
-            path = Directory.GetCurrentDirectory() + "\\appsettings.json";
+            path = Path.Combine(Path.Combine(Directory.GetCurrentDirectory(), "appsettings.json"));
             AppSettings = new();
             LoadSettings();
         }
@@ -108,10 +108,8 @@ namespace ProtonConsole2.Utilities
                 {
                     if (System.IO.Directory.Exists(path))
                     {
-                        if (path.Contains("/") && !path.EndsWith("/")) path += "/";
-                        if (path.Contains(@"\") && !path.EndsWith(@"\")) path += @"\";
                         var filename = "BASE.DBS";
-                        if (System.IO.File.Exists(path + filename))
+                        if (System.IO.File.Exists(Path.Combine(path , filename)))
                         {
                             AppSettings.PathToProtonFolder = path!;
                             SaveSettings();
@@ -190,16 +188,13 @@ namespace ProtonConsole2.Utilities
                 {
                     if (System.IO.Directory.Exists(path))
                     {
-                        if (path.Contains("/") && !path.EndsWith("/")) path += "/";
-                        if (path.Contains(@"\") && !path.EndsWith(@"\")) path += @"\";
-
                         AppSettings.PathToLogs = path!;
                         SaveSettings();
                         trycount = 10;
                         Log.Logger = new LoggerConfiguration()
                              .MinimumLevel.Debug()
                              .WriteTo.Console()
-                             .WriteTo.File(ConfigurationManager.AppSettings.PathToLogs + "AppLog.txt", rollingInterval: RollingInterval.Day)
+                             .WriteTo.File(Path.Combine(ConfigurationManager.AppSettings.PathToLogs , "AppLog.txt"), rollingInterval: RollingInterval.Day)
                              .CreateLogger();
 
                     }

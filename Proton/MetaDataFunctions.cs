@@ -147,6 +147,7 @@ namespace ProtonConsole2.Proton
                                     IdLineViewId = indexDef.IdlineScreenId,
                                     Prefix = keyDef.Prefix
                                 });
+                                break; // only one key per index type
                             }
                         }
                     }
@@ -226,7 +227,7 @@ namespace ProtonConsole2.Proton
 
                     DataContext.Attribute attr = new()
                     {
-                        Id = (short)itm.ItemId,
+                        Id = i,
                         EntityTypeId = itm.EntityTypeId,
                         TableId = tableId,
                         DisplayLength = itm.DisplayLength,
@@ -353,14 +354,13 @@ namespace ProtonConsole2.Proton
                 {
                     if (cd.MoveToPage(ix))
                     {
-                        var ct = cd.CodeDefId;
+                        var ct = ix;
                         if (ct > 0)
                         {
                             codes.Add(new() { Id = ix, Name = cd.Name });
                         }
                     }
                 }
-
             }
             return codes;
         }

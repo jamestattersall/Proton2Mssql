@@ -24,8 +24,6 @@ namespace ProtonConsole2.Proton
         public  static  Dictionary<string, short> PageLengths { get; } = [];
         public static void SetProtonBase(string pathToBinaries)
         {
-            if (pathToBinaries.Contains("/") && !pathToBinaries.EndsWith("/")) pathToBinaries += "/";
-            if (pathToBinaries.Contains(@"\") && !pathToBinaries.EndsWith(@"\")) pathToBinaries += @"\";
             ProtonFolderPath = pathToBinaries;
 
             using Base _base = new();
@@ -51,9 +49,7 @@ namespace ProtonConsole2.Proton
 
         private byte[] _pageBuffer;
 
-        private static long _fileLength;
-
-        protected int PagePtr { get; private set; }
+        protected uint PagePtr { get; private set; }
 
         protected short PageLength { get; private set; }
 
@@ -77,7 +73,7 @@ namespace ProtonConsole2.Proton
                 PageLength = pageLength;
             }
 
-            _fileStream = new FileStream(ProtonBase.ProtonFolderPath + dbName, FileMode.Open, FileAccess.Read, FileShare.None, pageLength, false);
+            _fileStream = new FileStream(Path.Combine(ProtonBase.ProtonFolderPath, dbName), FileMode.Open, FileAccess.Read, FileShare.None, pageLength, false);
             FileLength = _fileStream.Length;
             NPages = (int)FileLength/PageLength;
             _pageBuffer = new byte[PageLength];
@@ -102,32 +98,21 @@ namespace ProtonConsole2.Proton
 
         public virtual bool MoveToPage(int pagePtr)
         {
-            if (pagePtr == 0 || pagePtr > NPages || PageLength == 0)
-            {
-                return false;
-            }
-            else
-            {
-                if (PagePtr != pagePtr)
-                {
-                    //in theory, Proton Entity or Lookup ID could be > int.MaxValue as pointers to these are stored as 4 bytes and interpreted as unsigned
-                    //in this unlikely case, they will have been read as negative signed int, must be converted to uint. 
+            //in theory, Proton metatdata int (Int32) ID could be > int.MaxValue as pointers to these are stored as 4 bytes and interpreted as unsigned
+            //in this unlikely case, they will have been read as negative signed int, must be converted to uint UInt(32). 
 
-                    long filePos = (pagePtr - 1) * PageLength;//(Unsafe.As<int, uint>(ref pagePtr) - 1) * PageLength;
-                   if(filePos < 0)
-                    {
-                        bool debug = true;
-                    }
-                    
-                    SetPage(filePos);
-
-                    PagePtr = pagePtr;
-                }
-                return PageIsValid;
-            }
+            return MoveToPage((uint)(pagePtr < 0 ? Unsafe.As<int, uint>(ref pagePtr) : (uint)pagePtr));
         }
 
         public virtual bool MoveToPage(short pagePtr)
+        {
+            //in theory, Proton metatdata short (Int16) ID could be > short.MaxValue as pointers to these are stored as 2 bytes and interpreted as unsigned
+            //in this unlikely case, they will have been read as negative signed short, must be converted to ushort (UInt16). 
+
+            return MoveToPage((uint)(pagePtr < 0 ? Unsafe.As<short, ushort>(ref pagePtr): (uint)pagePtr));
+        }
+
+        public virtual bool MoveToPage(uint pagePtr)
         {
             if (pagePtr == 0 || pagePtr > NPages || PageLength == 0)
             {
@@ -135,19 +120,17 @@ namespace ProtonConsole2.Proton
             }
             else
             {
-
                 if (PagePtr != pagePtr)
                 {
-                    //in theory, Proton short IDs could be > short.MaxValue as pointers to these are stored as 2 bytes and interpreted as unsigned
-                    //in this unlikely case, they will have been read as negative signed short, must be converted to ushort. 
-                    long filePos = (pagePtr -1) * PageLength; // (Unsafe.As<short, ushort>(ref pagePtr) - 1) * PageLength;
-                    SetPage(filePos);
-                    
+
+                    SetPage((pagePtr - 1) * PageLength);
+
                     PagePtr = pagePtr;
                 }
                 return PageIsValid;
             }
         }
+        
 
         private void SetPage(long target)
         {
