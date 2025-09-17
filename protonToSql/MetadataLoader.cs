@@ -1,6 +1,4 @@
-﻿using EFCore.BulkExtensions;
-using Microsoft.Data.SqlClient;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using ProtonConsole2.DataContext;
 using ProtonConsole2.Proton;
@@ -10,7 +8,7 @@ using System.Data;
 using System.Data.Common;
 using System.Diagnostics;
 using System.Text.Json;
-using SqlBulkCopyOptions = EFCore.BulkExtensions.SqlBulkCopyOptions;
+using ProtonConsole2.protonToSql;
 
 namespace ProtonConsole2.ProtonToSql
 {
@@ -53,26 +51,6 @@ namespace ProtonConsole2.ProtonToSql
     public class MetadataLoader()
     {
 
-        public static void DbSyncFunction(List<Entity> entities, Proton2Context ctx)
-        {
-            var es = (from e in entities
-                      select e.Id).ToArray();
-            ctx.ValueTexts.Where(e => es.Contains(e.EntityId)).ExecuteDelete();
-            ctx.ValueNumbers.Where(e => es.Contains(e.EntityId)).ExecuteDelete();
-            ctx.ValueLookups.Where(e => es.Contains(e.EntityId)).ExecuteDelete();
-            ctx.ValueLongTexts.Where(e => es.Contains(e.EntityId)).ExecuteDelete();
-            ctx.ValueDates.Where(e => es.Contains(e.EntityId)).ExecuteDelete();
-            ctx.ValueTimes.Where(e => es.Contains(e.EntityId)).ExecuteDelete();
-            ctx.ValueEntities.Where(e => es.Contains(e.EntityId)).ExecuteDelete();
-            ctx.Entities.Where(e => es.Contains(e.Id)).ExecuteDelete();
-
-            ctx.BulkInsert(entities, o =>
-            {
-                o.IncludeGraph = true;
-                o.SqlBulkCopyOptions=SqlBulkCopyOptions.KeepIdentity;
-            });
-
-        }
         
         public static void LoadMetadata()
         {
@@ -87,26 +65,29 @@ namespace ProtonConsole2.ProtonToSql
             ctx.Database.ExecuteSql($"EXEC sp_msforeachtable 'ALTER TABLE ? NOCHECK CONSTRAINT ALL'");
             var progress = new Progress(10);
             float  c = 1;
-            var bulkConfig = new BulkConfig { SqlBulkCopyOptions = SqlBulkCopyOptions.KeepIdentity, UseTempDB = false };
             Console.WriteLine("Loading /updating metadata");
 
             if (ctx.DataTypes.Any())
             {
-                ctx.BulkInsertOrUpdate(MetaDataFunctions.GetDataTypes(), bulkConfig);
+                using MetaTableUtilities<DataType> mtu = new();
+                mtu.BulkSync(MetaDataFunctions.GetDataTypes());
             } else
             {
-               ctx.BulkInsert(MetaDataFunctions.GetDataTypes(), bulkConfig);
+                using MetaTableUtilities<DataType> mtu = new();
+                mtu.BulkInsert(MetaDataFunctions.GetDataTypes());
             }
             progress.WriteProgressBar(c / nTables); c++;
             ctx.SaveChanges();
 
             if (ctx.Tables.Any())
             {
-                ctx.BulkInsertOrUpdate(MetaDataFunctions.GetTables(), bulkConfig);
+                using MetaTableUtilities<Table> mtu = new();
+                mtu.BulkSync(MetaDataFunctions.GetTables());
             }
             else
             {
-                ctx.BulkInsert(MetaDataFunctions.GetTables(), bulkConfig);
+                using MetaTableUtilities<Table> mtu = new();
+                mtu.BulkInsert(MetaDataFunctions.GetTables());
             }
             progress.WriteProgressBar(c / nTables); c++;
        
@@ -114,33 +95,39 @@ namespace ProtonConsole2.ProtonToSql
 
             if (ctx.Views.Any())
             {
-                ctx.BulkInsertOrUpdate(MetaDataFunctions.GetViews(), bulkConfig);
+                using MetaTableUtilities<View> mtu = new();
+                mtu.BulkSync(MetaDataFunctions.GetViews());
             }
             else
             {
-                ctx.BulkInsert(MetaDataFunctions.GetViews(), bulkConfig);
+                using MetaTableUtilities<View> mtu = new();
+                mtu.BulkInsert(MetaDataFunctions.GetViews());
             }
             progress.WriteProgressBar(c / nTables); c++;
            
 
             if (ctx.EntityTypes.Any())
             {
-                ctx.BulkInsertOrUpdate(MetaDataFunctions.GetEntityTypes(), bulkConfig);
+                using MetaTableUtilities<EntityType> mtu = new();
+                mtu.BulkSync(MetaDataFunctions.GetEntityTypes());
             }
             else
             {
-                ctx.BulkInsert(MetaDataFunctions.GetEntityTypes(), bulkConfig);
+                using MetaTableUtilities<EntityType> mtu = new();
+                mtu.BulkInsert(MetaDataFunctions.GetEntityTypes());
             }
             progress.WriteProgressBar(c/ nTables); c++;
             ctx.SaveChanges();
 
             if (ctx.IndexTypes.Any())
             {
-               ctx.BulkInsertOrUpdate(MetaDataFunctions.GetIndexTypes(), bulkConfig);
+                using MetaTableUtilities<IndexType> mtu = new();
+                mtu.BulkSync(MetaDataFunctions.GetIndexTypes());
             }
             else
             {
-                ctx.BulkInsert(MetaDataFunctions.GetIndexTypes(), bulkConfig);
+                using MetaTableUtilities<IndexType> mtu = new();
+                mtu.BulkInsert(MetaDataFunctions.GetIndexTypes());
             }
             progress.WriteProgressBar(c / nTables); c++;
             ctx.SaveChanges();
@@ -148,11 +135,13 @@ namespace ProtonConsole2.ProtonToSql
            
             if (ctx.Attributes.Any())
             {
-                ctx.BulkInsertOrUpdate(MetaDataFunctions.GetAttributes(), bulkConfig);
+                using MetaTableUtilities<DataContext.Attribute> mtu = new();
+                mtu.BulkSync(MetaDataFunctions.GetAttributes());
             }
             else
             {
-                ctx.BulkInsert(MetaDataFunctions.GetAttributes(), bulkConfig);
+                using MetaTableUtilities<DataContext.Attribute> mtu = new();
+                mtu.BulkInsert(MetaDataFunctions.GetAttributes());
             }
             progress.WriteProgressBar(c / nTables); c++;
             ctx.SaveChanges();
@@ -161,22 +150,26 @@ namespace ProtonConsole2.ProtonToSql
 
             if (ctx.ViewAttributes.Any())
             {
-                ctx.BulkInsertOrUpdate(MetaDataFunctions.GetViewAttributes(), bulkConfig);
+                using MetaTableUtilities<DataContext.ViewAttribute> mtu = new();
+                mtu.BulkSync(MetaDataFunctions.GetViewAttributes());
             }
             else
             {
-                ctx.BulkInsert(MetaDataFunctions.GetViewAttributes(), bulkConfig);
+                using MetaTableUtilities<DataContext.ViewAttribute> mtu = new();
+                mtu.BulkInsert(MetaDataFunctions.GetViewAttributes());
             }
             progress.WriteProgressBar(c / nTables); c++;
             ctx.SaveChanges();
 
             if (ctx.ViewCaptions.Any())
             {
-                ctx.BulkInsertOrUpdate(MetaDataFunctions.GetViewCaptions(), bulkConfig);
+                using MetaTableUtilities<DataContext.ViewCaption> mtu = new();
+                mtu.BulkSync(MetaDataFunctions.GetViewCaptions());
             }
             else
             {
-                ctx.BulkInsert(MetaDataFunctions.GetViewCaptions(), bulkConfig);
+                using MetaTableUtilities<DataContext.ViewCaption> mtu = new();
+                mtu.BulkInsert(MetaDataFunctions.GetViewCaptions());
             }
             progress.WriteProgressBar(c / nTables); c++;
             ctx.SaveChanges();
@@ -184,50 +177,86 @@ namespace ProtonConsole2.ProtonToSql
 
             if (ctx.LookupTypes.Any())
             {
-                ctx.BulkInsertOrUpdate(MetaDataFunctions.GetLookupTypes(), bulkConfig);
+                using MetaTableUtilities<DataContext.LookupType> mtu = new();
+                mtu.BulkSync(MetaDataFunctions.GetLookupTypes());
             }
             else
             {
-                ctx.BulkInsert(MetaDataFunctions.GetLookupTypes(), bulkConfig);
+                using MetaTableUtilities<DataContext.LookupType> mtu = new();
+                mtu.BulkInsert(MetaDataFunctions.GetLookupTypes());
             }
             progress.WriteProgressBar(c / nTables); c++;
             ctx.SaveChanges();
 
             if (ctx.Menus.Any())
             {
-                ctx.BulkInsertOrUpdate(MetaDataFunctions.GetMenus(), bulkConfig);
+                using MetaTableUtilities<DataContext.Menu> mtu = new();
+                mtu.BulkSync(MetaDataFunctions.GetMenus());
             }
             else
             {
-                ctx.BulkInsert(MetaDataFunctions.GetMenus(), bulkConfig);
+                using MetaTableUtilities<DataContext.Menu> mtu = new();
+                mtu.BulkInsert(MetaDataFunctions.GetMenus());
             }
             progress.WriteProgressBar(c / nTables); c++;
             ctx.SaveChanges();
 
             if (ctx.MenuItems.Any())
             {
-                ctx.BulkInsertOrUpdate(MetaDataFunctions.GetMenuItems(), bulkConfig);
+                using MetaTableUtilities<DataContext.ProtonUi.MenuItem> mtu = new();
+                mtu.BulkSync(MetaDataFunctions.GetMenuItems());
             }
             else
             {
-                ctx.MenuItems.AddRange(MetaDataFunctions.GetMenuItems());
+                using MetaTableUtilities<DataContext.ProtonUi.MenuItem> mtu = new();
+                mtu.BulkInsert(MetaDataFunctions.GetMenuItems());
             }
             progress.WriteProgressBar(c / nTables); c++;
             ctx.SaveChanges();
 
             if (ctx.UserStarters.Any())
             {
-
-                ctx.BulkInsertOrUpdate(MetaDataFunctions.GetUserStarters(), bulkConfig);
+                using MetaTableUtilities<DataContext.UserStarter> mtu = new();
+                mtu.BulkSync(MetaDataFunctions.GetUserStarters());
             }
             else
             {
-                ctx.BulkInsert(MetaDataFunctions.GetUserStarters(), bulkConfig);
+                using MetaTableUtilities<DataContext.UserStarter> mtu = new();
+                mtu.BulkInsert(MetaDataFunctions.GetUserStarters());
             }
             progress.WriteProgressBar(1);
             ctx.SaveChanges();
 
+            ctx.Database.ExecuteSqlRaw(@"
+UPDATE Menus
+SET EntityTypeId = s.EntityTypeId
+FROM MENUS m
+inner join UserStarters s on s.MenuId=m.Id
 
+UPDATE Menus
+SET EntityTypeId = i.Parameter1
+FROM Menus m
+INNER JOIN MenuItems i on i.NextMenuId = m.Id and i.[function] = 'CHGE'
+
+UPDATE Menus
+SET EntityTypeId=t.EntityTypeId
+FROM Menus m
+INNER JOIN MenuItems i on i.MenuId=m.id and i.[function] = 'SCRN'
+INNER JOIN Views v on v.Id=i.Parameter1
+INNER JOIN Tables t on t.Id=v.TableId
+
+declare @rc int = 1000
+WHILE @rc <> 0
+BEGIN
+	UPDATE m
+	SET EntityTypeId = m2.EntityTypeId
+	FROM Menus m
+	INNER JOIN MenuItems i on i.NextMenuId = m.Id and i.[function] <> 'CHGE'
+	INNER JOIN Menus m2 on m2.id = i.MenuId
+	where m.EntityTypeId = 0 and m2.EntityTypeId > 0
+
+	set @rc = @@ROWCOUNT
+END");
         }
     }
 }

@@ -82,7 +82,7 @@ namespace ProtonConsole2.Utilities
                 } else
                 {
                     var toExit = Questioner.GetBoolResponse("Continue without saving?", false);
-                    if (toExit != null || toExit == true)
+                    if (toExit)
                     {
                         trycount = 10;
                     }
@@ -100,7 +100,7 @@ namespace ProtonConsole2.Utilities
                 if (path.IsNullOrEmpty())
                 {
                     var toExit = Questioner.GetBoolResponse("Continue without saving?", false);
-                    if (toExit != null || toExit == true)
+                    if (toExit)
                     {
                         trycount = 10;
                     }
@@ -179,7 +179,7 @@ namespace ProtonConsole2.Utilities
                 if (path.IsNullOrEmpty())
                 {
                     var toExit = Questioner.GetBoolResponse("Continue without saving?", false);
-                    if (toExit != null || toExit == true)
+                    if (toExit)
                     {
                         trycount = 10;
                     }

@@ -518,7 +518,6 @@ namespace ProtonConsole2.protonToSql
                 }
             }
 
-
             void Process(int i)
             {
                 counter++;
@@ -583,6 +582,5 @@ namespace ProtonConsole2.protonToSql
             EntityDs.Dispose();
         }
     }
-
 }
 

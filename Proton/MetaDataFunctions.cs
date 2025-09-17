@@ -1,20 +1,6 @@
-﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Query.Internal;
-using Microsoft.EntityFrameworkCore.Storage;
-using Microsoft.Identity.Client;
-using Microsoft.IdentityModel.Tokens;
-using NetTopologySuite.Index.HPRtree;
+﻿
 using ProtonConsole2.DataContext;
 using ProtonConsole2.DataContext.ProtonUi;
-using ProtonConsole2.Proton;
-using ProtonConsole2.ProtonToSql;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
-using System.Runtime.CompilerServices;
-using System.Threading.Tasks.Dataflow;
-using System.Transactions;
-using System.Xml;
 
 namespace ProtonConsole2.Proton
 {
@@ -460,11 +446,9 @@ namespace ProtonConsole2.Proton
                         }
 
 
-                        short seq = 0;
 
                         if (scrtxt.MoveToPage(ix))
                         {
-                            seq = 0;
                             string nm = scrtxt.Text.Replace("date of", "", StringComparison.CurrentCultureIgnoreCase).Replace("date at", "", StringComparison.OrdinalIgnoreCase).Replace("date", "", StringComparison.OrdinalIgnoreCase).Trim();
                             if (nm.Length > scrObj.Name.Length)
                             {
@@ -477,8 +461,6 @@ namespace ProtonConsole2.Proton
                 }
 
             return list;
-
-
         }
 
         class ViewAttributeEquality : EqualityComparer<ViewAttribute>

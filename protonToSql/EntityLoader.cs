@@ -1,5 +1,4 @@
-﻿using EFCore.BulkExtensions;
-using Microsoft.Data.SqlClient;
+﻿using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using ProtonConsole2.DataContext;
@@ -18,6 +17,9 @@ namespace ProtonConsole2.protonToSql
         public static void LoadLookups(int nRows)
         {
             List<DataContext.Lookup> list = new() { Capacity = nRows };
+
+            using MetaTableUtilities<Lookup> bx = new ();
+            bx.CreateStagingTable();
             using Proton.Dict dict = new();
             using Proton.RCode code = new();
             using Proton2Context ctx = new();
@@ -54,7 +56,7 @@ namespace ProtonConsole2.protonToSql
                 c++;
                 if (c > nRows)
                 {
-                    fn();
+                     fn();
                     c = 0;
                     list.Clear();
 
@@ -84,22 +86,26 @@ namespace ProtonConsole2.protonToSql
                 }
             }
             fn();
-
+            if (exists) bx.SyncFromStaging();
+           
             prog.WriteProgressBar(1);
 
             void dbUpdateFunction()
             {
-                ctx.BulkInsertOrUpdate<DataContext.Lookup>(list);
+                 bx.BulkInsert(list, true);
+                //ctx.BulkInsertOrUpdate<DataContext.Lookup>(list);
             }
             void dbInsertFunction()
             {
-                ctx.BulkInsert<DataContext.Lookup>(list);
+                 bx.BulkInsert(list);
             }
         }
 
 
         public static void LoadEntities(int nRows)
         {
+            using MetaTableUtilities<DataContext.Entity> bx = new();
+            bx.CreateStagingTable();
             List<DataContext.Entity> list = new() { Capacity = nRows };
             using Proton.Patsts patsts = new();
             using Proton.Vrx vrx = new();
@@ -145,29 +151,30 @@ namespace ProtonConsole2.protonToSql
                 }
             }
             fn();
+            if(exists) bx.SyncFromStaging();
+
             prog.WriteProgressBar(1);
 
             void dbUpdateFunction()
             {
                 //ctx.Entities.UpdateRange(list);
                 // ctx.SaveChanges();
-                ctx.BulkInsertOrUpdate(list);
+                bx.BulkInsert(list, true);
             }
             void dbInsertFunction()
             {
                 //ctx.Entities.AddRange(list);
                 //ctx.SaveChanges();
-                ctx.BulkInsert(list);
+                bx.BulkInsert(list);
             }
+     
         }
 
 
         public static void LoadIndexes(int nRows)
         {
-            using DataTable indexDt = new DataTable();
-            indexDt.Columns.Add(new DataColumn() { DataType = typeof(short), ColumnName = "IndexTypeId" });
-            indexDt.Columns.Add(new DataColumn() { DataType = typeof(string), ColumnName = "Term" });
-            indexDt.Columns.Add(new DataColumn() { DataType = typeof(int), ColumnName = "EntityId" });
+            using DataTable indexDt = MetaTableUtilities<DataContext.Index>.GetTable();
+          
 
             using Proton.Index index = new();
             using Proton.KeyDef keydef = new();
