@@ -173,8 +173,8 @@ namespace ProtonConsole2.protonToSql
 
         public static void LoadIndexes(int nRows)
         {
-            using DataTable indexDt = MetaTableUtilities<DataContext.Index>.GetTable();
-          
+            using MetaTableUtilities<DataContext.Index> metaTableUtilities = new();
+            using DataTable indexDt = metaTableUtilities.GetTable();
 
             using Proton.Index index = new();
             using Proton.KeyDef keydef = new();

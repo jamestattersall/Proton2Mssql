@@ -13,10 +13,17 @@ using System.Threading.Tasks;
 
 namespace ProtonConsole2.protonToSql
 {
-    internal abstract class TableUtilities<T> : IDisposable
+    interface ITableUtilities : IDisposable
+    {
+        DataTable GetTable();
+        void BulkInsert(DataTable dt, bool toStaging = false);
+        void BulkSync(DataTable dt);
+        void SyncFromStaging();
+    }
+
+    internal abstract class TableUtilities<T> : IDisposable, ITableUtilities
     {
         protected static readonly string tableName;
-        protected static readonly string stagingTableName;
         protected static readonly string sqlCreateStagingTable;
         protected static readonly string sqlDeleteStagingTable;
         protected static readonly string sqlCreatePk;
@@ -24,10 +31,9 @@ namespace ProtonConsole2.protonToSql
         protected static string sqlSyncFromStaging;
         protected static PropertyInfo[] propertyInfos;
         protected static readonly Proton2Context ctx = new();
-        protected static List<string> joinSet = [];
-        protected static List<string> valSet = [];
-        protected static List<string> keyColumns = null;
-
+        protected static List<string> nonKeyColumnNames = [];
+        protected static List<string> keyColumnNames = [];
+        protected static string stagingTableName;
         public SqlConnection cnn;
         public SqlBulkCopy sqlBulkCopy;
         protected SqlCommand cdCreateStagingTable;
@@ -35,7 +41,6 @@ namespace ProtonConsole2.protonToSql
 
         static TableUtilities()
         {
-            List<string> nonKeyColumns = [];
             var t = typeof(T);
             var entityType = ctx.Model.FindEntityType(t);
             string? tn = null;
@@ -45,110 +50,59 @@ namespace ProtonConsole2.protonToSql
             }
             if (tn == null) throw new Exception($"Type {t.FullName} not in datasets");
             tableName = tn;
-            stagingTableName = $"staging_{tableName}";
+            stagingTableName=Sql.StagingTableName(tableName);
 
-            propertyInfos = t.GetProperties().Where(p => !p.PropertyType.IsClass || p.PropertyType == typeof(string)).ToArray();
-            System.Attribute[] attrs = System.Attribute.GetCustomAttributes(t);  
+            //exclude ref properties apart from strings properties, order by derived properties first.
+            propertyInfos = t.GetProperties().Where(p => !p.PropertyType.IsClass || p.PropertyType == typeof(string)).OrderBy(o => o.DeclaringType == t).ToArray();
+
+            System.Attribute[] attrs = System.Attribute.GetCustomAttributes(t);
 
             foreach (System.Attribute attr in attrs)
             {
                 if (attr is PrimaryKeyAttribute a)
                 {
-                    keyColumns = (List<string>)a.PropertyNames;
+                    keyColumnNames = a.PropertyNames.ToList();
                 }
             }
 
-            if (keyColumns == null)
-            {
-                keyColumns = new List<string>();
+            if (keyColumnNames.Count() == 0)
                 foreach (PropertyInfo p in propertyInfos)
                 {
                     foreach (System.Attribute attr in p.GetCustomAttributes())
                     {
                         if (attr is KeyAttribute a)
                         {
-                            keyColumns.Add($"[{p.Name}]");
+                            keyColumnNames.Add($"[{p.Name}]");
                         }
                     }
                 }
-            }
 
             foreach (PropertyInfo p in propertyInfos)
             {
                 var sname = $"[{p.Name}]";
-                if (!keyColumns.Contains(sname))
+                if (!keyColumnNames.Contains(sname))
                 {
-                    nonKeyColumns.Add(sname);
+                    nonKeyColumnNames.Add(sname);
                 }
             }
 
-            foreach (string val in nonKeyColumns)
-            {
-                valSet.Add($"{val} = s.{val}");
-            }
-
-
-            foreach (string val in keyColumns)
-            {
-                joinSet.Add($"s.{val} = t.{val}");
-            }
-
-            List<string> whereNotSet = [];
-            foreach (string val in nonKeyColumns)
-            {
-                whereNotSet.Add($"(t.{val} <> s.{val})");
-                whereNotSet.Add($"(t.{val} IS NULL AND s.{val} IS NOT NULL)");
-                whereNotSet.Add($"(t.{val} IS NOT NULL AND s.{val} IS NULL)");
-            }
-
-            sqlCreateStagingTable = $@"
-IF OBJECT_ID('{stagingTableName}') IS NOT NULL  
-DROP TABLE [{stagingTableName}]
-
-SELECT TOP 0 * 
-INTO [{stagingTableName}]
-FROM [{tableName}]";
-
-            sqlCreatePk = $@"
-ALTER TABLE [{stagingTableName}]
-   ADD CONSTRAINT PK_staging_{tableName} PRIMARY KEY CLUSTERED ({string.Join(',', keyColumns.ToArray())})";
-
-            sqlUpsert = $@"
-UPDATE [{tableName}]
-SET {string.Join(@",
-", valSet.ToArray())}
-FROM [{stagingTableName}] s
-INNER JOIN [{tableName}] t ON {string.Join(@"
-  AND ", joinSet.ToArray())}
-WHERE ({string.Join(@"
-  OR ", whereNotSet.ToArray())})
-
-INSERT INTO [{tableName}]
-SELECT s.* 
-FROM [{stagingTableName}] s
-LEFT JOIN [{tableName}] t ON {string.Join(@"
-  AND ", joinSet.ToArray())}
-WHERE t.{keyColumns[0]} is null";
-
-            sqlDeleteStagingTable = $@"
-DROP TABLE [{stagingTableName}]
-";
-
+            sqlCreateStagingTable = Sql.sqlCreateStagingTable(tableName);
+            sqlCreatePk = Sql.sqlCreateStagingPrimaryKey(tableName, keyColumnNames.ToArray());
+            sqlUpsert = Sql.sqlUpsert(tableName, keyColumnNames.ToArray(), nonKeyColumnNames.ToArray());
+            sqlDeleteStagingTable = Sql.sqlDeleteStagingTable(tableName);
         }
 
         public TableUtilities()
         {
-
             cnn = new(Utilities.ConfigurationManager.AppSettings.SQLConnectionString());
             sqlBulkCopy = new(Utilities.ConfigurationManager.AppSettings.SQLConnectionString());
             if (cnn.State != ConnectionState.Open) cnn.Open();
 
-            cdCreateStagingTable = new(sqlCreateStagingTable, cnn);
+            cdCreateStagingTable = new(Sql.sqlCreateStagingTable(tableName), cnn);
             cdSyncFromStaging = new(sqlSyncFromStaging, cnn);
-
         }
 
-        public static DataTable GetTable()
+        public DataTable GetTable()
         {
             DataTable dt = new(tableName);
             for (int i = 0; i < propertyInfos.Length; i++)
@@ -158,13 +112,12 @@ DROP TABLE [{stagingTableName}]
                 {
                     ColumnName = pi.Name,
                     DataType = Nullable.GetUnderlyingType(pi.PropertyType) ?? pi.PropertyType,
-                    
                 });
             }
             return dt;
         }
                           
-        public static DataTable GetTable(List<T> values)
+        public DataTable GetTable(List<T> values)
         {
             DataTable dt = GetTable();
             foreach (T val in values)
@@ -220,11 +173,8 @@ DROP TABLE [{stagingTableName}]
 
         public void BulkSync(DataTable dt)
         {
-           
-
             try
             {
-
                 if (cnn.State != ConnectionState.Open)  cnn.Open();
                  cdCreateStagingTable.ExecuteNonQuery();
             }
@@ -235,7 +185,6 @@ DROP TABLE [{stagingTableName}]
 
             try
             {
-
                 sqlBulkCopy.DestinationTableName = stagingTableName;
                  sqlBulkCopy.WriteToServer(dt);
             }
@@ -249,7 +198,6 @@ DROP TABLE [{stagingTableName}]
 
         public void SyncFromStaging()
         {
-
             if (cnn.State != ConnectionState.Open)  cnn.Open();
             try
             {
@@ -260,7 +208,6 @@ DROP TABLE [{stagingTableName}]
                 Log.Error(ex, @$"Unable to sync {stagingTableName}
 {sqlSyncFromStaging}
 ");
-
             }
         }
 
@@ -270,23 +217,16 @@ DROP TABLE [{stagingTableName}]
             sqlBulkCopy.Close();
             cdCreateStagingTable.Dispose();
             cdSyncFromStaging.Dispose();
-
         }
+
     }
 
 
     internal class ValueTableUtilities<T> : TableUtilities<T> where T : class
     {
-
-
         static ValueTableUtilities()
         {
-            string sqlDeleteFromStaging = $@"
-DELETE {tableName}
-FROM {tableName} t
-LEFT JOIN {stagingTableName} s ON {string.Join(" AND ", joinSet.ToArray())}
-WHERE s.EntityId is null
-AND t.EntityId IN (SELECT EntityId FROM {stagingTableName} GROUP BY EntityId)";
+            string sqlDeleteFromStaging = Sql.sqlValuesDeleteFromStaging(tableName, keyColumnNames.ToArray()); ;
 
             StringBuilder sb = new();
             sb.AppendLine(sqlCreatePk);
@@ -299,15 +239,9 @@ AND t.EntityId IN (SELECT EntityId FROM {stagingTableName} GROUP BY EntityId)";
 
     internal class MetaTableUtilities<T> : TableUtilities<T> where T : class
     {
-
         static MetaTableUtilities()
         {
-            
-            string sqlDeleteFromStaging = $@"
-DELETE {tableName}
-FROM {tableName} t
-LEFT JOIN {stagingTableName} s ON {string.Join(" AND ", joinSet.ToArray())}
-WHERE s.{keyColumns[0]} is null";
+            string sqlDeleteFromStaging = Sql.sqlMetadataDeleteFromStaging(tableName, keyColumnNames.ToArray());
 
             StringBuilder sb = new();
             sb.AppendLine(sqlCreatePk);
@@ -318,5 +252,4 @@ WHERE s.{keyColumns[0]} is null";
 
         }
     }
-
 }

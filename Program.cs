@@ -10,9 +10,6 @@ using System.Data;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 
-var ctx = new Proton2Context();
-
-
 
 Questioner.EditSettings();
 return;
