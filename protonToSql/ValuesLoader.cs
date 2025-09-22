@@ -15,15 +15,15 @@ namespace ProtonConsole2.protonToSql
 
     internal class ValuesLoader : IDisposable
     {
+        private const int Start = 0;
         static readonly Dictionary<int, AttributeFn?> AttributeFns = [];
 
-        private Vrx vrx = new();
-        private Patsts patsts = new();
-        private Data data = new();
-        private FrText frText = new();
+        private readonly Vrx vrx = new();
+        private readonly Patsts patsts = new();
+        private readonly Data data = new();
+        private readonly FrText frText = new();
 
-        private ITableUtilities[] tableUtilities ;
-        private DataTable[] dataTables;
+        private IValueTableUtilities[] tableUtilities ;
 
         public struct ValueIndex
         {
@@ -39,14 +39,9 @@ namespace ProtonConsole2.protonToSql
 
         public ValuesLoader()
         {
-            var tableCount = Enum.GetNames(typeof(ValueTable)).Length;
-            tableUtilities = new ITableUtilities[tableCount];
+            var tableCount = Enum.GetNames<ValueTable>().Length;
+            tableUtilities = new IValueTableUtilities[tableCount];
             GetTableUtils();
-            dataTables = new DataTable[tableCount];
-            for(int i = 0; i< tableCount; i++)
-            {
-                dataTables[i] = tableUtilities[i].GetTable();
-            }
 
             NEntities = vrx.NPages;
             NDataPages = data.NPages;
@@ -73,66 +68,38 @@ namespace ProtonConsole2.protonToSql
                     }
 
                     AttributeFn? proc = null;
-                    switch (item.DataType)
+                    proc = item.DataType switch
                     {
-                        case 1:
-                            proc = new(dataTables[(short)ValueTable.ValueTexts], 
-                                ProcessString);
-                            break;
-                        case 2:
-                            proc = new(dataTables[(short)ValueTable.ValueNumbers],
-                                (item.SubType == 0) ? ProcessUint8 : ProcessInt8);
-                            break;
-                        case 3:
-                            proc = new(dataTables[(short)ValueTable.ValueNumbers],
-                                (item.SubType == 0) ? ProcessUint16 : ProcessInt16);
-                            break;
-                        case 4:
-                            proc = new(dataTables[(short)ValueTable.ValueNumbers],
-                                (item.SubType == 0) ? ProcessUint32 : ProcessInt32);
-                            break;
-                        case 5:
-                            proc = new(dataTables[(short)ValueTable.ValueNumbers],
-                                (qual || mod) ? ProcessCompositeSingle : ProcessSingle, 
-                                0, dataTables[(short)ValueTable.ValueLookups]) ;
-                            break;
-                        case 6:
-                            proc = new(dataTables[(short)ValueTable.ValueNumbers],
-                                (qual || mod) ? ProcessCompositeDouble : ProcessDouble,
-                                0, dataTables[(short)ValueTable.ValueLookups]);
-                            break;
-                        case 7:
-                            proc = new(dataTables[(short)ValueTable.ValueLookups], 
-                                ProcessDict);
-                            break;
-                        case 8:
-                            proc = new(dataTables[(short)ValueTable.ValueDates], 
-                                ProcessDate);
-                            break;
-                        case 9:
-                            proc = new(dataTables[(short)ValueTable.ValueTimes],
-                                ProcessCompositeTime,
-                                0, dataTables[(short)ValueTable.ValueTexts] );
-                             
-                            break;
-                        case 10:
-                            proc = new(dataTables[(short)ValueTable.ValueLongTexts],
-                                ProcessFreeText);
-                            break;
-                        case 11:
-                            proc = new(dataTables[(short)ValueTable.ValueTexts],
-                                ProcessEntityPtr,
-                                item.SubType, dataTables[(short)ValueTable.ValueEntities]);
-                            break;
-                        case 12:
-                            proc = new(dataTables[(short)ValueTable.ValueLookups], 
-                                ProcessCode);
-                            break;
-
-                        default:
-                            throw new Exception("unknown datatype " + item.DataType.ToString());
-
-                    }
+                        1 => new(tableUtilities[(short)ValueTable.ValueTexts],
+                                                        ProcessString),
+                        2 => new(tableUtilities[(short)ValueTable.ValueNumbers],
+                                                        (item.SubType == 0) ? ProcessUint8 : ProcessInt8),
+                        3 => new(tableUtilities[(short)ValueTable.ValueNumbers],
+                                                        (item.SubType == 0) ? ProcessUint16 : ProcessInt16),
+                        4 => new(tableUtilities[(short)ValueTable.ValueNumbers],
+                                                        (item.SubType == 0) ? ProcessUint32 : ProcessInt32),
+                        5 => new(tableUtilities[(short)ValueTable.ValueNumbers],
+                                                        (qual || mod) ? ProcessCompositeSingle : ProcessSingle,
+                                                        0, tableUtilities[(short)ValueTable.ValueLookups]),
+                        6 => new(tableUtilities[(short)ValueTable.ValueNumbers],
+                                                        (qual || mod) ? ProcessCompositeDouble : ProcessDouble,
+                                                        0, tableUtilities[(short)ValueTable.ValueLookups]),
+                        7 => new(tableUtilities[(short)ValueTable.ValueLookups],
+                                                        ProcessDict),
+                        8 => new(tableUtilities[(short)ValueTable.ValueDates],
+                                                        ProcessDate),
+                        9 => new(tableUtilities[(short)ValueTable.ValueTimes],
+                                                        ProcessCompositeTime,
+                                                        0, tableUtilities[(short)ValueTable.ValueTexts]),
+                        10 => new(tableUtilities[(short)ValueTable.ValueLongTexts],
+                                                        ProcessFreeText),
+                        11 => new(tableUtilities[(short)ValueTable.ValueTexts],
+                                                        ProcessEntityPtr,
+                                                        item.SubType, tableUtilities[(short)ValueTable.ValueEntities]),
+                        12 => new(tableUtilities[(short)ValueTable.ValueLookups],
+                                                        ProcessCode),
+                        _ => throw new Exception("unknown datatype " + item.DataType.ToString()),
+                    };
                     AttributeFns.Add(i, proc);
                 }
             }
@@ -141,7 +108,7 @@ namespace ProtonConsole2.protonToSql
 
         private void GetTableUtils()
         {
-            tableUtilities = new ITableUtilities[Enum.GetNames(typeof(ValueTable)).Length];
+            tableUtilities = new IValueTableUtilities[Enum.GetNames<ValueTable>().Length];
 
             tableUtilities[(int)ValueTable.ValueTexts] =  new ValueTableUtilities<ValueText>();
             tableUtilities[(int)ValueTable.ValueLongTexts] = new ValueTableUtilities<ValueLongText>();
@@ -235,57 +202,57 @@ namespace ProtonConsole2.protonToSql
             return false;
         }
 
-        private class AttributeFn(DataTable tbl, Action<DataTable, ValueIndex, ReadOnlyMemory<byte>, short, DataTable?> action, short subTypeId = 0, DataTable? dataTable2 = null)
+        private class AttributeFn(IValueTableUtilities utils, Action<DataRowCollection, ValueIndex, ReadOnlyMemory<byte>, short, DataRowCollection?> action, short subTypeId = 0, IValueTableUtilities? utils2 = null)
         {
             //store immutable parameters. So no need to supply them when calling the Action function.
-            private readonly DataTable Tbl = tbl;
+            private readonly IValueTableUtilities Utils = utils;
             private readonly short SubtypeId = subTypeId;
-            private readonly DataTable? DataTable2 = dataTable2;
+            private readonly IValueTableUtilities? Utils2 = utils2;
 
-            private Action<DataTable, ValueIndex, ReadOnlyMemory<byte>, short, DataTable?> Action = action;
+            private readonly Action<DataRowCollection, ValueIndex, ReadOnlyMemory<byte>, short, DataRowCollection?> Action = action;
 
             public void Exec(ValueIndex valueIndex, ReadOnlyMemory<byte> data)
             {
-                Action!(Tbl, valueIndex, data, SubtypeId, DataTable2);
+                Action!(Utils.DataRows, valueIndex, data, SubtypeId, Utils2?.DataRows);
             }
         }
 
-        private void ProcessString(DataTable tbl, ValueIndex valueIndex, ReadOnlyMemory<byte> data, short p = 0, DataTable? dataTable2 = null)
+        private void ProcessString(DataRowCollection dataRows, ValueIndex valueIndex, ReadOnlyMemory<byte> data, short p = 0, DataRowCollection? dataRows2 = null)
         {
-            tbl.Rows.Add(valueIndex.EntityId, valueIndex.AttributeId, valueIndex.Seq, ProtonDbFileReader.GetString(data));
+           dataRows.Add( valueIndex.EntityId, valueIndex.AttributeId, valueIndex.Seq, ProtonDbFileReader.GetString(data));
         }
 
-        private void ProcessUint8(DataTable tbl, ValueIndex valueIndex, ReadOnlyMemory<byte> data, short p = 0, DataTable? dataTable2 = null)
+        private void ProcessUint8(DataRowCollection dataRows, ValueIndex valueIndex, ReadOnlyMemory<byte> data, short p = 0, DataRowCollection? dataRows2 = null)
         {
-            tbl.Rows.Add(valueIndex.EntityId, valueIndex.AttributeId, valueIndex.Seq, data.Span[0]);
+            dataRows.Add(valueIndex.EntityId, valueIndex.AttributeId, valueIndex.Seq, data.Span[0]);
         }
 
-        private void ProcessInt8(DataTable tbl, ValueIndex valueIndex, ReadOnlyMemory<byte> data, short p = 0, DataTable? datatable2 = null)
+        private void ProcessInt8(DataRowCollection dataRows, ValueIndex valueIndex, ReadOnlyMemory<byte> data, short p = 0, DataRowCollection? dataRows2 = null)
         {
-            tbl.Rows.Add(valueIndex.EntityId, valueIndex.AttributeId, valueIndex.Seq, ProtonDbFileReader.GetUInt8(data.Slice(0, 1)));
+            dataRows.Add(valueIndex.EntityId, valueIndex.AttributeId, valueIndex.Seq, ProtonDbFileReader.GetUInt8(data.Slice(Start, 1)));
         }
 
-        private void ProcessUint16(DataTable tbl, ValueIndex valueIndex, ReadOnlyMemory<byte> data, short p = 0, DataTable? dataTable2 = null)
+        private void ProcessUint16(DataRowCollection dataRows, ValueIndex valueIndex, ReadOnlyMemory<byte> data, short p = 0, DataRowCollection? dataRows2 = null)
         {
-            tbl.Rows.Add(valueIndex.EntityId, valueIndex.AttributeId, valueIndex.Seq, ProtonDbFileReader.GetUInt16(GetMemory(data, 2)));
+            dataRows.Add(valueIndex.EntityId, valueIndex.AttributeId, valueIndex.Seq, ProtonDbFileReader.GetUInt16(GetMemory(data, 2)));
         }
 
-        private void ProcessInt16(DataTable tbl, ValueIndex valueIndex, ReadOnlyMemory<byte> data, short p = 0, DataTable? dataTable2 = null)
+        private void ProcessInt16(DataRowCollection dataRows, ValueIndex valueIndex, ReadOnlyMemory<byte> data, short p = 0, DataRowCollection? dataRows2 = null)
         {
-            tbl.Rows.Add(valueIndex.EntityId, valueIndex.AttributeId, valueIndex.Seq, ProtonDbFileReader.GetInt16(GetMemory(data, 2)));
+            dataRows.Add(valueIndex.EntityId, valueIndex.AttributeId, valueIndex.Seq, ProtonDbFileReader.GetInt16(GetMemory(data, 2)));
         }
 
-        private void ProcessUint32(DataTable tbl, ValueIndex valueIndex, ReadOnlyMemory<byte> data, short p = 0, DataTable? dataTable2 = null)
+        private void ProcessUint32(DataRowCollection dataRows, ValueIndex valueIndex, ReadOnlyMemory<byte> data, short p = 0, DataRowCollection? dataRows2 = null)
         {
-            tbl.Rows.Add(valueIndex.EntityId, valueIndex.AttributeId, valueIndex.Seq, ProtonDbFileReader.GetUInt32(GetMemory(data, 4)));
+            dataRows.Add(valueIndex.EntityId, valueIndex.AttributeId, valueIndex.Seq, ProtonDbFileReader.GetUInt32(GetMemory(data, 4)));
         }
 
-        private void ProcessInt32(DataTable tbl, ValueIndex valueIndex, ReadOnlyMemory<byte> data, short p = 0, DataTable? dataTable2 = null)
+        private void ProcessInt32(DataRowCollection dataRows, ValueIndex valueIndex, ReadOnlyMemory<byte> data, short p = 0, DataRowCollection? dataRows2 = null)
         {
-            tbl.Rows.Add(valueIndex.EntityId, valueIndex.AttributeId, valueIndex.Seq, ProtonDbFileReader.GetInt32(GetMemory(data, 4)));
+            dataRows.Add(valueIndex.EntityId, valueIndex.AttributeId, valueIndex.Seq, ProtonDbFileReader.GetInt32(GetMemory(data, 4)));
         }
 
-        private bool CheckFloat(float res, ValueIndex valueIndex)
+        private static bool CheckFloat(float res, ValueIndex valueIndex)
         {
             if (!float.IsFinite(res))
             {
@@ -295,117 +262,117 @@ namespace ProtonConsole2.protonToSql
             return true;
         }
 
-        private void ProcessSingle(DataTable tbl, ValueIndex valueIndex, ReadOnlyMemory<byte> data, short subTypeId = 0, DataTable? dt2=null)
+        private void ProcessSingle(DataRowCollection dataRows, ValueIndex valueIndex, ReadOnlyMemory<byte> data, short subTypeId = 0, DataRowCollection? dataRows2 = null)
         {
 
             var res = ProtonDbFileReader.GetSingle(GetMemory(data, 4));
             if (CheckFloat(res, valueIndex))
             {
-                tbl.Rows.Add(valueIndex.EntityId, valueIndex.AttributeId, valueIndex.Seq, res);
+                dataRows.Add(valueIndex.EntityId, valueIndex.AttributeId, valueIndex.Seq, res);
             }
         }
 
-        private void ProcessDouble(DataTable tbl, ValueIndex valueIndex, ReadOnlyMemory<byte> data, short subTypeId = 0, DataTable? dt2 = null)
+        private void ProcessDouble(DataRowCollection dataRows, ValueIndex valueIndex, ReadOnlyMemory<byte> data, short subTypeId = 0, DataRowCollection? dataRows2 = null)
         {
             var res = ProtonDbFileReader.GetDouble(GetMemory(data, 8));
             if (CheckFloat(res, valueIndex))
             {
-                tbl.Rows.Add(valueIndex.EntityId, valueIndex.AttributeId, valueIndex.Seq, res);
+                dataRows.Add(valueIndex.EntityId, valueIndex.AttributeId, valueIndex.Seq, res);
             }
         }
 
-        private void ProcessCompositeSingle(DataTable tbl, ValueIndex valueIndex, ReadOnlyMemory<byte> data, short subTypeId = 0, DataTable? tbl2 = null)
+        private void ProcessCompositeSingle(DataRowCollection dataRows, ValueIndex valueIndex, ReadOnlyMemory<byte> data, short subTypeId = 0, DataRowCollection? dataRows2 = null)
         {
             var com = GetCompositeSingle(data);
             if (com.Number != null && CheckFloat((float)com.Number!, valueIndex))
             {
-                tbl.Rows.Add(valueIndex.EntityId, valueIndex.AttributeId, valueIndex.Seq, (float)Math.Round((double)com.Number));
+                dataRows.Add(valueIndex.EntityId, valueIndex.AttributeId, valueIndex.Seq, (float)Math.Round((double)com.Number));
             }
             if (com.QualifierCodeId > 0)
             {
-                tbl2?.Rows.Add(valueIndex.EntityId, valueIndex.AttributeId, valueIndex.Seq, com.QualifierCodeId);
+                dataRows2?.Add(valueIndex.EntityId, valueIndex.AttributeId, valueIndex.Seq, com.QualifierCodeId);
             }
         }
 
-        private void ProcessCompositeDouble(DataTable tbl, ValueIndex valueIndex, ReadOnlyMemory<byte> data, short subTypeId = 0, DataTable? tbl2 = null)
+        private void ProcessCompositeDouble(DataRowCollection dataRows, ValueIndex valueIndex, ReadOnlyMemory<byte> data, short subTypeId = 0, DataRowCollection? dataRows2 = null)
         {
             var com = GetCompositeDouble(data);
 
             if (com.Number != null && CheckFloat((float)com.Number!, valueIndex))
             {
-                tbl.Rows.Add(valueIndex.EntityId, valueIndex.AttributeId, valueIndex.Seq, (float)Math.Round((double)com.Number));
+                dataRows.Add(valueIndex.EntityId, valueIndex.AttributeId, valueIndex.Seq, (float)Math.Round((double)com.Number));
             }
             if (com.QualifierCodeId > 0)
             {
-                tbl2?.Rows.Add(valueIndex.EntityId, valueIndex.AttributeId, valueIndex.Seq, com.QualifierCodeId);
+                dataRows2?.Add(valueIndex.EntityId, valueIndex.AttributeId, valueIndex.Seq, com.QualifierCodeId);
             }
         }
 
-        private void ProcessDict(DataTable tbl, ValueIndex valueIndex, ReadOnlyMemory<byte> data, short p = 0, DataTable? dataTable2 = null)
+        private void ProcessDict(DataRowCollection dataRows, ValueIndex valueIndex, ReadOnlyMemory<byte> data, short p = 0, DataRowCollection? dataRows2 = null)
         {
             var id = ProtonDbFileReader.GetUInt16(GetMemory(data, 2));
             if (id > 0)
             {
-                tbl.Rows.Add(valueIndex.EntityId, valueIndex.AttributeId, valueIndex.Seq, -id);
+                dataRows.Add(valueIndex.EntityId, valueIndex.AttributeId, valueIndex.Seq, -id);
             }
         }
 
-        private void ProcessCode(DataTable tbl, ValueIndex valueIndex, ReadOnlyMemory<byte> data, short p = 0, DataTable? dataTable2 = null)
+        private void ProcessCode(DataRowCollection dataRows, ValueIndex valueIndex, ReadOnlyMemory<byte> data, short p = 0, DataRowCollection? dataRows2 = null)
         {
             var id = ProtonDbFileReader.GetInt32(GetMemory(data, 4));
             if (id > 0)
             {
-                tbl.Rows.Add(valueIndex.EntityId, valueIndex.AttributeId, valueIndex.Seq, id);
+                dataRows.Add(valueIndex.EntityId, valueIndex.AttributeId, valueIndex.Seq, id);
             }
         }
 
-        private void ProcessDate(DataTable tbl, ValueIndex valueIndex, ReadOnlyMemory<byte> data, short p = 0, DataTable? dataTable2 = null)
+        private void ProcessDate(DataRowCollection dataRows, ValueIndex valueIndex, ReadOnlyMemory<byte> data, short p = 0, DataRowCollection? dataRows2 = null)
         {
             var dt = ProtonDbFileReader.GetUInt16(GetMemory(data, 2));
             if (dt > 0)
             {
-                tbl.Rows.Add(valueIndex.EntityId, valueIndex.AttributeId, valueIndex.Seq, ProtonDbFileReader.ProtonBaseDate.AddDays(dt));
+                dataRows.Add(valueIndex.EntityId, valueIndex.AttributeId, valueIndex.Seq, ProtonDbFileReader.ProtonBaseDate.AddDays(dt));
             }
         }
 
-        private void ProcessCompositeTime(DataTable tbl, ValueIndex valueIndex, ReadOnlyMemory<byte> data, short p = 0, DataTable? tbl2 = null)
+        private void ProcessCompositeTime(DataRowCollection dataRows, ValueIndex valueIndex, ReadOnlyMemory<byte> data, short p = 0, DataRowCollection? dataRows2 = null)
         {
             var com = GetCompositeTime(data);
             if (com.ReplacementText == "")
             {
-                tbl.Rows.Add(valueIndex.EntityId, valueIndex.AttributeId, valueIndex.Seq, com.Time);
+                dataRows.Add(valueIndex.EntityId, valueIndex.AttributeId, valueIndex.Seq, com.Time);
             }
             else
             {
-                tbl2?.Rows.Add(valueIndex.EntityId, valueIndex.AttributeId, valueIndex.Seq, com.ReplacementText);
+                dataRows2?.Add(valueIndex.EntityId, valueIndex.AttributeId, valueIndex.Seq, com.ReplacementText);
             }
         }
 
-        private void ProcessFreeText(DataTable tbl, ValueIndex valueIndex, ReadOnlyMemory<byte> data, short p = 0, DataTable? dataTable2 = null)
+        private void ProcessFreeText(DataRowCollection dataRows, ValueIndex valueIndex, ReadOnlyMemory<byte> data, short p = 0, DataRowCollection? dataRows2 = null)
         {
             var id = ProtonDbFileReader.GetInt32(GetMemory(data, 4));
             if (id > 0 && frText.MoveToPage(id))
             {
                 if (frText.EntityId == valueIndex.EntityId)
                 {
-                    tbl.Rows.Add(valueIndex.EntityId, valueIndex.AttributeId, valueIndex.Seq, frText.Text(id));
+                    dataRows.Add(valueIndex.EntityId, valueIndex.AttributeId, valueIndex.Seq, frText.Text(id));
                 }
             }
         }
 
-        private void ProcessEntityPtr(DataTable tbl, ValueIndex valueIndex, ReadOnlyMemory<byte> data, short subTypeId = 0, DataTable? tbl2 = null)
+        private void ProcessEntityPtr(DataRowCollection dataRows, ValueIndex valueIndex, ReadOnlyMemory<byte> data, short subTypeId = 0, DataRowCollection? dataRows2 = null)
         {
             var key = ProtonDbFileReader.GetString(data);
             using IndexReader ih = new();
             if (!key.IsNullOrEmpty())
             {
-                tbl.Rows.Add(valueIndex.EntityId, valueIndex.AttributeId, valueIndex.Seq, key);
+                dataRows.Add(valueIndex.EntityId, valueIndex.AttributeId, valueIndex.Seq, key);
 
                 var eId = ih.GetEntityId(subTypeId, key);
 
                 if (eId > 0)
                 {
-                    tbl2!.Rows.Add(valueIndex.EntityId, valueIndex.AttributeId, valueIndex.Seq, eId);
+                    dataRows2!.Add(valueIndex.EntityId, valueIndex.AttributeId, valueIndex.Seq, eId);
                 }
             }
         }
@@ -453,22 +420,22 @@ namespace ProtonConsole2.protonToSql
         {
             var timeOffset = ProtonDbFileReader.GetUInt32(GetMemory(data, 4));
 
-            switch (timeOffset)
+            return timeOffset switch
             {
-                case 0x20000000: return new CompositeTime() { ReplacementText = "PRE" };
-                case 0x40000000: return new CompositeTime() { ReplacementText = "POST" };
-                case 0x80000000: return new CompositeTime() { Time = TimeOnly.MinValue, ReplacementText = "" };
-                default: return new CompositeTime() { Time = TimeOnly.MinValue.AddMinutes(timeOffset / 60000), ReplacementText = "" };
-            }
+                0x20000000 => new CompositeTime() { ReplacementText = "PRE" },
+                0x40000000 => new CompositeTime() { ReplacementText = "POST" },
+                0x80000000 => new CompositeTime() { Time = TimeOnly.MinValue, ReplacementText = "" },
+                _ => new CompositeTime() { Time = TimeOnly.MinValue.AddMinutes(timeOffset / 60000), ReplacementText = "" },
+            };
         }
 
 
-        public void LoadValues(int nRows)
+        public void LoadValues(int nRows, bool forSync = false)
         {
             var st = Stopwatch.StartNew();
-            foreach(DataTable tbl in dataTables)
+            foreach(IValueTableUtilities u in tableUtilities)
             {
-                tbl.Rows.Clear();
+                u.DataRows.Clear();
             }
 
             int counter = 0;
@@ -482,7 +449,7 @@ namespace ProtonConsole2.protonToSql
                 BatchSize = nRows
             };
 
-            Func<DataTable, bool> loadFunction = Utilities.ConfigurationManager.AppSettings.NoLoad ? Noload : writeToServer;
+            Func<IValueTableUtilities, bool> loadFunction = Utilities.ConfigurationManager.AppSettings.NoLoad ? Noload : writeToServer;
 
             long nEntities = 0;
 
@@ -509,9 +476,10 @@ namespace ProtonConsole2.protonToSql
                 }
             }
 
-            foreach (DataTable tbl in dataTables)
+            foreach (IValueTableUtilities u in tableUtilities)
             {
-                loadFunction(tbl);
+                if (forSync) u.BulkSync();
+                else u.BulkInsert();
             }
 
             prog.WriteProgressBar(1);
@@ -519,29 +487,16 @@ namespace ProtonConsole2.protonToSql
             string str = Utilities.ConfigurationManager.AppSettings.NoLoad ? "Scanned " : "Loaded ";
             Console.WriteLine($"{str} in {st.Elapsed:hh\\:mm\\:ss}");
 
-            bool Noload(DataTable tbl)
+            bool Noload(IValueTableUtilities u)
             {
-                tbl.Rows.Clear();
+                u.DataRows.Clear();
                 return true;
             }
 
-            bool writeToServer(DataTable tbl)
+            bool writeToServer(IValueTableUtilities u)
             {
-                bkc.DestinationTableName = tbl.TableName;
-                try
-                {
-                    bkc.WriteToServer(tbl);
-                    return true;
-                }
-                catch (Exception ex)
-                {
-                    Log.Error(ex, $"Failed to save to table {tbl.TableName}{Environment.NewLine} first row:{string.Join(',',tbl.Rows[0].ItemArray.ToList().ConvertAll(o => o.ToString()).ToArray())}, last row{string.Join(',', tbl.Rows[tbl.Rows.Count-1].ItemArray.ToList().ConvertAll(o => o.ToString()).ToArray())}");
-                    return false;
-                }
-                finally
-                {
-                    tbl.Rows.Clear();
-                }
+                u.BulkSync();
+                return true;
             }
 
             void Process(int i)
@@ -562,11 +517,12 @@ namespace ProtonConsole2.protonToSql
 
                     if (success)
                     {
-                        foreach (DataTable tbl in dataTables)
+                        foreach (IValueTableUtilities u in tableUtilities)
                         {
-                            if (tbl.Rows.Count > nRows)
+                            if (u.DataRows.Count > nRows)
                             {
-                                loadFunction(tbl);
+                                if (forSync) u.BulkSync();
+                                else u.BulkInsert();
                             }
                         }
                     }
@@ -602,12 +558,8 @@ namespace ProtonConsole2.protonToSql
             frText.Dispose();
             data.Dispose();
             patsts.Dispose();
-            foreach(DataTable tbl in dataTables)
-            {
-                tbl.Clear();
-                tbl.Dispose();
-            }
-            foreach (ITableUtilities util in tableUtilities)
+
+            foreach (IValueTableUtilities util in tableUtilities)
             {
                util.Dispose();
             }

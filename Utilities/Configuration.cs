@@ -346,24 +346,24 @@ namespace ProtonConsole2.Utilities
 
         public bool TestConnection(bool defaultDb=false)
         {
-            using (SqlConnection connection = new SqlConnection(SQLConnectionString(defaultDb)))
+            using SqlConnection connection = new SqlConnection(SQLConnectionString(defaultDb));
+            
+            try
             {
-                try
-                {
-                    connection.Open();
-                    connection.Close();
-                    return true;
-                }
-                catch (SqlException ex)
-                {
-                    Console.WriteLine("unable to connect to server using:" + ConfigurationManager.AppSettings.SQLConnectionString(true) + " " + ex.Message);
-                    return false;
-                }
+                connection.Open();
+                connection.Close();
+                return true;
             }
+            catch (SqlException ex)
+            {
+                Console.WriteLine("unable to connect to server using:" + ConfigurationManager.AppSettings.SQLConnectionString(true) + " " + ex.Message);
+                return false;
+            }
+            
         }
         public bool TestPathToProton()
         {
-            return (File.Exists(PathToProtonFolder + "BASE.dbs"));
+            return (File.Exists(Path.Combine(PathToProtonFolder , "BASE.dbs")));
         }
         public bool TestPathToLogs()
         {

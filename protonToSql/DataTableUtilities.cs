@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Microsoft.Identity.Client;
 using ProtonConsole2.DataContext;
 using Serilog;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Data;
 using System.Reflection;
@@ -13,15 +14,14 @@ using System.Threading.Tasks;
 
 namespace ProtonConsole2.protonToSql
 {
-    interface ITableUtilities : IDisposable
+    interface IValueTableUtilities : IDisposable
     {
-        DataTable GetTable();
-        void BulkInsert(DataTable dt, bool toStaging = false);
-        void BulkSync(DataTable dt);
-        void SyncFromStaging();
+        void BulkSync();
+        void BulkInsert(bool forSync = false);
+        DataRowCollection DataRows { get;  }
     }
 
-    internal abstract class TableUtilities<T> : IDisposable, ITableUtilities
+    internal abstract class TableUtilities<T> : IDisposable, IValueTableUtilities
     {
         protected static readonly string tableName;
         protected static readonly string sqlCreateStagingTable;
@@ -34,10 +34,14 @@ namespace ProtonConsole2.protonToSql
         protected static List<string> nonKeyColumnNames = [];
         protected static List<string> keyColumnNames = [];
         protected static string stagingTableName;
+        protected static DataTable emptyDataTable = new();
         public SqlConnection cnn;
         public SqlBulkCopy sqlBulkCopy;
         protected SqlCommand cdCreateStagingTable;
         protected SqlCommand cdSyncFromStaging;
+        protected DataTable DataTable = new();
+        protected bool NeedsStagingTable = true;
+
 
         static TableUtilities()
         {
@@ -53,7 +57,7 @@ namespace ProtonConsole2.protonToSql
             stagingTableName=Sql.StagingTableName(tableName);
 
             //exclude ref properties apart from strings properties, order by derived properties first.
-            propertyInfos = t.GetProperties().Where(p => !p.PropertyType.IsClass || p.PropertyType == typeof(string)).OrderBy(o => o.DeclaringType == t).ToArray();
+            propertyInfos = [.. t.GetProperties().Where(p => !p.PropertyType.IsClass || p.PropertyType == typeof(string)).OrderBy(o => o.DeclaringType == t)];
 
             System.Attribute[] attrs = System.Attribute.GetCustomAttributes(t);
 
@@ -61,11 +65,11 @@ namespace ProtonConsole2.protonToSql
             {
                 if (attr is PrimaryKeyAttribute a)
                 {
-                    keyColumnNames = a.PropertyNames.ToList();
+                    keyColumnNames = [.. a.PropertyNames];
                 }
             }
 
-            if (keyColumnNames.Count() == 0)
+            if (keyColumnNames.Count == 0)
                 foreach (PropertyInfo p in propertyInfos)
                 {
                     foreach (System.Attribute attr in p.GetCustomAttributes())
@@ -86,9 +90,20 @@ namespace ProtonConsole2.protonToSql
                 }
             }
 
+            
+            for (int i = 0; i < propertyInfos.Length; i++)
+            {
+                var pi = propertyInfos[i];
+                emptyDataTable.Columns.Add(new DataColumn()
+                {
+                    ColumnName = pi.Name,
+                    DataType = Nullable.GetUnderlyingType(pi.PropertyType) ?? pi.PropertyType,
+                });
+            }
+
             sqlCreateStagingTable = Sql.sqlCreateStagingTable(tableName);
-            sqlCreatePk = Sql.sqlCreateStagingPrimaryKey(tableName, keyColumnNames.ToArray());
-            sqlUpsert = Sql.sqlUpsert(tableName, keyColumnNames.ToArray(), nonKeyColumnNames.ToArray());
+            sqlCreatePk = Sql.sqlCreateStagingPrimaryKey(tableName, [.. keyColumnNames]);
+            sqlUpsert = Sql.sqlUpsert(tableName, [.. keyColumnNames], [.. nonKeyColumnNames]);
             sqlDeleteStagingTable = Sql.sqlDeleteStagingTable(tableName);
         }
 
@@ -98,52 +113,53 @@ namespace ProtonConsole2.protonToSql
             sqlBulkCopy = new(Utilities.ConfigurationManager.AppSettings.SQLConnectionString());
             if (cnn.State != ConnectionState.Open) cnn.Open();
 
+            DataTable = emptyDataTable.Clone();
+            NeedsStagingTable = true;
             cdCreateStagingTable = new(Sql.sqlCreateStagingTable(tableName), cnn);
             cdSyncFromStaging = new(sqlSyncFromStaging, cnn);
         }
 
-        public DataTable GetTable()
+                       
+
+        private void CreateDataTable(List<T> values)
         {
-            DataTable dt = new(tableName);
-            for (int i = 0; i < propertyInfos.Length; i++)
-            {
-                var pi = propertyInfos[i];
-                dt.Columns.Add(new DataColumn()
-                {
-                    ColumnName = pi.Name,
-                    DataType = Nullable.GetUnderlyingType(pi.PropertyType) ?? pi.PropertyType,
-                });
-            }
-            return dt;
-        }
-                          
-        public DataTable GetTable(List<T> values)
-        {
-            DataTable dt = GetTable();
+            DataTable=emptyDataTable.Clone();
             foreach (T val in values)
             {
                 var vals = new object[propertyInfos.Length];
                 for (int i = 0; i < propertyInfos.Length; i++)
                 {
-                    vals[i] = propertyInfos[i].GetValue(val);
+                    vals[i] = propertyInfos[i].GetValue(val)!;
                 }
-                dt.Rows.Add(vals);
+                DataTable.Rows.Add(vals);
             }
-            return dt;
         }
 
-        public void BulkInsert(List<T> values, bool toStaging = false)
+        public void BulkSync(List<T> values)
         {
-            var dt = GetTable(values);
-             BulkInsert(dt, toStaging);
+            CreateDataTable(values);
+            BulkInsert(true);
+            BulkSync();
         }
 
-        public void BulkInsert(DataTable dt, bool toStaging = false)
+        public void BulkInsert(List<T> values)
         {
+            CreateDataTable(values);
+            BulkInsert(false);
+        }
+
+        public DataRowCollection DataRows => DataTable.Rows;
+  
+        public void BulkInsert(bool toStaging = false)
+        {
+            if (toStaging && NeedsStagingTable) CreateStagingTable();
+
             try
             {
                 sqlBulkCopy.DestinationTableName = toStaging ? stagingTableName : tableName;
-                 sqlBulkCopy.WriteToServer(dt);
+                sqlBulkCopy.WriteToServer(DataTable);
+                DataTable = emptyDataTable.Clone();
+                NeedsStagingTable = toStaging;
             }
             catch (Exception ex)
             {
@@ -151,19 +167,14 @@ namespace ProtonConsole2.protonToSql
             }
         }
 
-        public void BulkSync(List<T> values)
-        {
-            var dt = GetTable(values);
-             BulkSync(dt);
-        }
-
-        public void CreateStagingTable()
+        private void CreateStagingTable()
         {
             try
             {
                 if (cnn.State != ConnectionState.Open)  cnn.Open();
 
                 cdCreateStagingTable.ExecuteNonQuery();
+                NeedsStagingTable = false;
             }
             catch (Exception ex)
             {
@@ -171,37 +182,19 @@ namespace ProtonConsole2.protonToSql
             }
         }
 
-        public void BulkSync(DataTable dt)
+        public void BulkSync()
         {
-            try
-            {
-                if (cnn.State != ConnectionState.Open)  cnn.Open();
-                 cdCreateStagingTable.ExecuteNonQuery();
-            }
-            catch (Exception ex)
-            {
-                Log.Error(ex, $"Unable to create table {stagingTableName} ");
-            }
 
-            try
-            {
-                sqlBulkCopy.DestinationTableName = stagingTableName;
-                 sqlBulkCopy.WriteToServer(dt);
-            }
-            catch (Exception ex)
-            {
-                Log.Error(ex, $"Unable to write {stagingTableName} to server.");
-            }
 
-            SyncFromStaging();
-        }
-
-        public void SyncFromStaging()
-        {
             if (cnn.State != ConnectionState.Open)  cnn.Open();
+
+            BulkInsert(true);
+
             try
             {
-                 cdSyncFromStaging.ExecuteNonQuery();
+                cdSyncFromStaging.ExecuteNonQuery();
+                NeedsStagingTable = true;
+                DataTable = emptyDataTable.Clone();
             }
             catch (Exception ex)
             {
@@ -226,7 +219,7 @@ namespace ProtonConsole2.protonToSql
     {
         static ValueTableUtilities()
         {
-            string sqlDeleteFromStaging = Sql.sqlValuesDeleteFromStaging(tableName, keyColumnNames.ToArray()); ;
+            string sqlDeleteFromStaging = Sql.sqlValuesDeleteFromStaging(tableName, [.. keyColumnNames]); ;
 
             StringBuilder sb = new();
             sb.AppendLine(sqlCreatePk);
@@ -234,6 +227,7 @@ namespace ProtonConsole2.protonToSql
             sb.AppendLine(sqlUpsert);
             sb.AppendLine(sqlDeleteStagingTable);
             sqlSyncFromStaging = sb.ToString();
+
         }
     }
 
@@ -241,7 +235,7 @@ namespace ProtonConsole2.protonToSql
     {
         static MetaTableUtilities()
         {
-            string sqlDeleteFromStaging = Sql.sqlMetadataDeleteFromStaging(tableName, keyColumnNames.ToArray());
+            string sqlDeleteFromStaging = Sql.sqlMetadataDeleteFromStaging(tableName, [.. keyColumnNames]);
 
             StringBuilder sb = new();
             sb.AppendLine(sqlCreatePk);

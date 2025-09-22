@@ -32,9 +32,8 @@ namespace ProtonConsole2.Utilities
             string? retn = GetStringResponse(caption, defaultValue.ToString());
             if (!retn.IsNullOrEmpty())
             {
-                int op;
-                if (int.TryParse(retn, out op))
-                    {
+                if (int.TryParse(retn, out int op))
+                {
                     return op;
                 }
 

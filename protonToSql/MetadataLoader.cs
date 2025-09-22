@@ -19,7 +19,7 @@ namespace ProtonConsole2.ProtonToSql
 
             if (Object.ReferenceEquals(x, y)) return true;
 
-            if (Object.ReferenceEquals(x, null) || Object.ReferenceEquals(y, null))
+            if (x == null || y == null)
                 return false;
 
             return x.IndexTypeId == y.IndexTypeId && x.Term == y.Term && x.EntityId==y.EntityId;
@@ -31,7 +31,7 @@ namespace ProtonConsole2.ProtonToSql
         public int GetHashCode(DataContext.Index index)
         {
             //Check whether the object is null
-            if (Object.ReferenceEquals(index, null)) return 0;
+            if (index is null) return 0;
 
             //Get hash code for the Name field if it is not null.
             int hashTerm = index.Term == null ? 0 : index.Term.GetHashCode();

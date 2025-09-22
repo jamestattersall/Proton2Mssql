@@ -16,26 +16,23 @@ namespace ProtonConsole2.protonToSql
     {
         public static void LoadLookups(int nRows)
         {
-            List<DataContext.Lookup> list = new() { Capacity = nRows };
 
-            using MetaTableUtilities<Lookup> bx = new ();
-            bx.CreateStagingTable();
+            using MetaTableUtilities<Lookup> tableUtilities = new ();
+        
             using Proton.Dict dict = new();
             using Proton.RCode code = new();
             using Proton2Context ctx = new();
 
             bool exists = ctx.Lookups.Any();
-            Action fn;  
+     
             int c = 0;
             var prog = new Utilities.Progress(20);
             if (exists)
             {
-                fn = dbUpdateFunction;
                 Console.WriteLine("Updating Lookups..");
             }
             else
             {
-                fn = dbInsertFunction;
                 Console.WriteLine("Loading Lookups..");
             }
             prog.WriteProgressBar(0);
@@ -45,20 +42,13 @@ namespace ProtonConsole2.protonToSql
             {
                 if (dict.MoveToPage(i))
                 {
-                    list.Add(new()
-                    {
-                        Id = -i,
-                        Name = dict.Name,
-                        LookupTypeId = 0
-
-                    });
+                    tableUtilities.DataRows.Add(-i, 0, dict.Name, "");
                 }
                 c++;
                 if (c > nRows)
                 {
-                     fn();
+                    tableUtilities.BulkInsert(exists);
                     c = 0;
-                    list.Clear();
 
                     prog.WriteProgressBar(i / (float)tPages);
                 }
@@ -67,52 +57,34 @@ namespace ProtonConsole2.protonToSql
             {
                 if (code.MoveToPage(i))
                 {
-                    list.Add(new()
-                    {
-                        Id = i,
-                        Name = code.Name,
-                        Code = code.ReadCode,
-                        LookupTypeId = code.CodeTypeID
-                    });
+                    tableUtilities.DataRows.Add(i, code.CodeTypeID, code.Name, code.ReadCode);
                     c++;
                     if (c > nRows)
                     {
-                        fn();
+                        tableUtilities.BulkInsert(exists);
                         c = 0;
-                        list.Clear();
 
                         prog.WriteProgressBar((i + nDicts) / (float)tPages);
                     }
                 }
             }
-            fn();
-            if (exists) bx.SyncFromStaging();
+            tableUtilities.BulkInsert(exists);
+
+            if (exists)tableUtilities.BulkSync();
            
             prog.WriteProgressBar(1);
-
-            void dbUpdateFunction()
-            {
-                 bx.BulkInsert(list, true);
-                //ctx.BulkInsertOrUpdate<DataContext.Lookup>(list);
-            }
-            void dbInsertFunction()
-            {
-                 bx.BulkInsert(list);
-            }
         }
 
 
         public static void LoadEntities(int nRows)
         {
-            using MetaTableUtilities<DataContext.Entity> bx = new();
-            bx.CreateStagingTable();
-            List<DataContext.Entity> list = new() { Capacity = nRows };
+            using MetaTableUtilities<DataContext.Entity> tableUtilities = new();
+            
             using Proton.Patsts patsts = new();
             using Proton.Vrx vrx = new();
             using Proton2Context ctx = new();
             bool exists = ctx.Entities.Any();
-            Action fn =
-                exists ? dbUpdateFunction : dbInsertFunction;
+           
 
             int c = 0;
             int maxId = exists ? ctx.Entities.Max(e => e.Id) : 0;
@@ -128,54 +100,34 @@ namespace ProtonConsole2.protonToSql
             {
                 if (patsts.MoveToPage(i) && vrx.MoveToPage(i))
                 {
-                    list.Add(new()
-                    {
-                        Id = i,
-                        LastUpdated = patsts.Updated
-
-                    });
+       
+                    tableUtilities.DataRows.Add(i, 0, "", patsts.Updated);
                     if (exists && i > maxId)
                     {
-                        fn = dbUpdateFunction;
-                        exists = false;
+                       exists = false;
                     }
                     c++;
                     if (c > nRows)
                     {
-                        fn();
+                        tableUtilities.BulkInsert(exists);
                         c = 0;
-                        list.Clear();
-
+                        
                         prog.WriteProgressBar(i / (float)tPages);
                     }
                 }
             }
-            fn();
-            if(exists) bx.SyncFromStaging();
+            tableUtilities.BulkInsert(exists);
+            if (exists) tableUtilities.BulkSync();
 
             prog.WriteProgressBar(1);
-
-            void dbUpdateFunction()
-            {
-                //ctx.Entities.UpdateRange(list);
-                // ctx.SaveChanges();
-                bx.BulkInsert(list, true);
-            }
-            void dbInsertFunction()
-            {
-                //ctx.Entities.AddRange(list);
-                //ctx.SaveChanges();
-                bx.BulkInsert(list);
-            }
      
         }
 
 
         public static void LoadIndexes(int nRows)
         {
-            using MetaTableUtilities<DataContext.Index> metaTableUtilities = new();
-            using DataTable indexDt = metaTableUtilities.GetTable();
-
+            using MetaTableUtilities<DataContext.Index> tableUtilities = new();
+            
             using Proton.Index index = new();
             using Proton.KeyDef keydef = new();
             using Proton.IndexDef indexdef = new();
@@ -230,21 +182,20 @@ namespace ProtonConsole2.protonToSql
                         {
                             keyText.CopyTo(oldKeyText);
                             oldEntityId = entityId;
-                            indexDt.Rows.Add( i, ProtonDbFileReader.GetString(keyText), entityId);
+                            tableUtilities.DataRows.Add( i, ProtonDbFileReader.GetString(keyText), entityId);
                             c++;
                             cc++;
                             if (c > nRows)
                             {
-                                bkc.WriteToServer(indexDt);
+                                tableUtilities.BulkInsert();
                                 c = 0;
-                                indexDt.Rows.Clear();
                                 prog.WriteProgressBar((float)cc / (float)tc);
                             }
                         }
                     }
                 }
             }
-            bkc.WriteToServer(indexDt);
+            tableUtilities.BulkInsert(); 
             prog.WriteProgressBar(1);
             Console.WriteLine();
 

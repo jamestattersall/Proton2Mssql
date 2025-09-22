@@ -363,10 +363,7 @@ namespace ProtonConsole2.Proton
                 {
                     if (rcode.MoveToPage(ix))
                     {
-                        var ct = rcode.CodeTypeID;
-
-                        codes.Add(new() { Id = ix, Name = rcode.Name, LookupTypeId = rcode.CodeTypeID, Code = rcode.ReadCode });
-
+                      codes.Add(new() { Id = ix, Name = rcode.Name, LookupTypeId = rcode.CodeTypeID, Code = rcode.ReadCode });
                     }
                 }
             }
@@ -444,8 +441,6 @@ namespace ProtonConsole2.Proton
                                 if (breakLoop) break;
                             }
                         }
-
-
 
                         if (scrtxt.MoveToPage(ix))
                         {
