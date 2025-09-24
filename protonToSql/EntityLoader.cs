@@ -42,15 +42,16 @@ namespace ProtonConsole2.protonToSql
             {
                 if (dict.MoveToPage(i))
                 {
-                    tableUtilities.DataRows.Add(-i, 0, dict.Name, "");
-                }
-                c++;
-                if (c > nRows)
-                {
-                    tableUtilities.BulkInsert(exists);
-                    c = 0;
+                    tableUtilities.DataRows.Add((-i), 0, dict.Name, "");
+                
+                    c++;
+                    if (c > nRows)
+                    {
+                        tableUtilities.BulkInsert(exists);
+                        c = 0;
 
-                    prog.WriteProgressBar(i / (float)tPages);
+                        prog.WriteProgressBar(i / (float)tPages);
+                    }
                 }
             }
             for (int i = 1; i <= code.NPages; i++)
@@ -70,7 +71,7 @@ namespace ProtonConsole2.protonToSql
             }
             tableUtilities.BulkInsert(exists);
 
-            if (exists)tableUtilities.BulkSync();
+            if (exists)tableUtilities.SyncFromStaging();
            
             prog.WriteProgressBar(1);
         }
@@ -117,7 +118,7 @@ namespace ProtonConsole2.protonToSql
                 }
             }
             tableUtilities.BulkInsert(exists);
-            if (exists) tableUtilities.BulkSync();
+            if (exists) tableUtilities.SyncFromStaging();
 
             prog.WriteProgressBar(1);
      

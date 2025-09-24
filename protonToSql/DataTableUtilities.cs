@@ -16,7 +16,7 @@ namespace ProtonConsole2.protonToSql
 {
     interface IValueTableUtilities : IDisposable
     {
-        void BulkSync();
+        void SyncFromStaging();
         void BulkInsert(bool forSync = false);
         DataRowCollection DataRows { get;  }
     }
@@ -139,7 +139,7 @@ namespace ProtonConsole2.protonToSql
         {
             CreateDataTable(values);
             BulkInsert(true);
-            BulkSync();
+            SyncFromStaging();
         }
 
         public void BulkInsert(List<T> values)
@@ -159,7 +159,6 @@ namespace ProtonConsole2.protonToSql
                 sqlBulkCopy.DestinationTableName = toStaging ? stagingTableName : tableName;
                 sqlBulkCopy.WriteToServer(DataTable);
                 DataTable = emptyDataTable.Clone();
-                NeedsStagingTable = toStaging;
             }
             catch (Exception ex)
             {
@@ -182,14 +181,9 @@ namespace ProtonConsole2.protonToSql
             }
         }
 
-        public void BulkSync()
+        public void SyncFromStaging()
         {
-
-
             if (cnn.State != ConnectionState.Open)  cnn.Open();
-
-            BulkInsert(true);
-
             try
             {
                 cdSyncFromStaging.ExecuteNonQuery();

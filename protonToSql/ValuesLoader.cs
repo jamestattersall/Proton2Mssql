@@ -430,7 +430,7 @@ namespace ProtonConsole2.protonToSql
         }
 
 
-        public void LoadValues(int nRows, bool forSync = false)
+        public void LoadValues(int nRows)
         {
             var st = Stopwatch.StartNew();
             foreach(IValueTableUtilities u in tableUtilities)
@@ -438,9 +438,11 @@ namespace ProtonConsole2.protonToSql
                 u.DataRows.Clear();
             }
 
+
             int counter = 0;
 
             using Proton2Context ctx = new();
+            var forSync = ctx.ValueTexts.Any();
             ctx.Database.ExecuteSql($"EXEC sp_msforeachtable 'ALTER TABLE ? NOCHECK CONSTRAINT ALL'");
 
             using SqlBulkCopy bkc = new(Utilities.ConfigurationManager.AppSettings.SQLConnectionString(),
@@ -478,7 +480,7 @@ namespace ProtonConsole2.protonToSql
 
             foreach (IValueTableUtilities u in tableUtilities)
             {
-                if (forSync) u.BulkSync();
+                if (forSync) u.SyncFromStaging();
                 else u.BulkInsert();
             }
 
@@ -495,7 +497,7 @@ namespace ProtonConsole2.protonToSql
 
             bool writeToServer(IValueTableUtilities u)
             {
-                u.BulkSync();
+                u.SyncFromStaging();
                 return true;
             }
 
@@ -521,8 +523,8 @@ namespace ProtonConsole2.protonToSql
                         {
                             if (u.DataRows.Count > nRows)
                             {
-                                if (forSync) u.BulkSync();
-                                else u.BulkInsert();
+                                u.BulkInsert(forSync);
+                                if (forSync) u.SyncFromStaging();
                             }
                         }
                     }

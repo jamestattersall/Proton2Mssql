@@ -44,7 +44,7 @@ namespace ProtonConsole2.protonToSql
             {
                 res.Add($"t.{val} <> s.{val}");
             }
-            return string.Join(" AND ", res);
+            return string.Join(" OR ", res);
         }
 
         public static string StagingTableName(string tableName) => $@"{stagingPrefix}{tableName}";
@@ -60,7 +60,7 @@ DELETE {tableName}
 FROM {tableName} t
 LEFT JOIN {stagingTableName} s ON {joinStr}
 WHERE s.EntityId is null
-AND t.EntityId IN (SELECT EntityId FROM {tableName} GROUP BY EntityId)";
+AND t.EntityId IN (SELECT EntityId FROM {stagingTableName} GROUP BY EntityId)";
         }
 
         public static string sqlMetadataDeleteFromStaging(string tableName, string[] keyColumnNames)
