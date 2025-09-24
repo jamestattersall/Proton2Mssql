@@ -9,6 +9,7 @@ using System.Data.Common;
 using System.Diagnostics;
 using System.Text.Json;
 using ProtonConsole2.protonToSql;
+using Serilog;
 
 namespace ProtonConsole2.ProtonToSql
 {
@@ -65,7 +66,7 @@ namespace ProtonConsole2.ProtonToSql
             ctx.Database.ExecuteSql($"EXEC sp_msforeachtable 'ALTER TABLE ? NOCHECK CONSTRAINT ALL'");
             var progress = new Progress(10);
             float  c = 1;
-            Console.WriteLine("Loading /updating metadata");
+            Log.Information("Loading /updating metadata");
 
             if (ctx.DataTypes.Any())
             {

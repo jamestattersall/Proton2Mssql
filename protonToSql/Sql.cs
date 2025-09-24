@@ -129,8 +129,8 @@ WHERE t.{keyColumnNames[0]} is null";
             var stagingTableName = StagingTableName(tableName);
 
             return $@"
-DROP TABLE [{stagingTableName}]
-";
+IF OBJECT_ID('{stagingTableName}') IS NOT NULL  
+DROP TABLE [{stagingTableName}]";
         }
 
         public static string sqlTruncateStagingTable(string tableName)

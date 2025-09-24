@@ -144,7 +144,7 @@ namespace ProtonConsole2.Utilities
                                 .CreateLogger();
 
                             using ValuesLoader dsl = new();
-                            dsl.LoadValues(1000);
+                            dsl.LoadValues(3000);
                         }
                         break;
 

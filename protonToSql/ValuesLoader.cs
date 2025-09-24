@@ -443,12 +443,13 @@ namespace ProtonConsole2.protonToSql
 
             using Proton2Context ctx = new();
             var forSync = ctx.ValueTexts.Any();
+            var capt = forSync ? "Updating" : "Loading";
             ctx.Database.ExecuteSql($"EXEC sp_msforeachtable 'ALTER TABLE ? NOCHECK CONSTRAINT ALL'");
 
             using SqlBulkCopy bkc = new(Utilities.ConfigurationManager.AppSettings.SQLConnectionString(),
                 SqlBulkCopyOptions.TableLock & SqlBulkCopyOptions.KeepIdentity)
             {
-                BatchSize = nRows
+                BatchSize = nRows * 2
             };
 
             Func<IValueTableUtilities, bool> loadFunction = Utilities.ConfigurationManager.AppSettings.NoLoad ? Noload : writeToServer;
@@ -458,9 +459,9 @@ namespace ProtonConsole2.protonToSql
             var prog = new Utilities.Progress(20);
             if (Utilities.ConfigurationManager.AppSettings.OnlyTheseEntities.Count == 0)
             {
-                nEntities = vrx.NPages; 
-                Console.WriteLine($"Loading values for {nEntities} entities..");
-              
+                nEntities = vrx.NPages;
+                nEntities = 500;
+                Log.Information($"{capt} values for {nEntities} entities..");
                 prog.WriteProgressBar(0);
                 for (int i = 1; i <= nEntities; i++)
                 {
@@ -470,7 +471,7 @@ namespace ProtonConsole2.protonToSql
             else
             {
                 nEntities = Utilities.ConfigurationManager.AppSettings.OnlyTheseEntities.Count;
-                Console.WriteLine($"Loading values for {nEntities} entities..");
+                Log.Information($"{capt} values for {nEntities} entities..");
                 prog.WriteProgressBar(0);
                 foreach (int i in Utilities.ConfigurationManager.AppSettings.OnlyTheseEntities)
                 {
@@ -480,14 +481,14 @@ namespace ProtonConsole2.protonToSql
 
             foreach (IValueTableUtilities u in tableUtilities)
             {
+                u.BulkInsert(forSync);
                 if (forSync) u.SyncFromStaging();
-                else u.BulkInsert();
             }
 
             prog.WriteProgressBar(1);
             st.Stop();
             string str = Utilities.ConfigurationManager.AppSettings.NoLoad ? "Scanned " : "Loaded ";
-            Console.WriteLine($"{str} in {st.Elapsed:hh\\:mm\\:ss}");
+            Log.Information($"{str} in {st.Elapsed:hh\\:mm\\:ss}");
 
             bool Noload(IValueTableUtilities u)
             {
