@@ -733,7 +733,7 @@ namespace ProtonConsole2.Proton
 
                 if (toRepeat)
                 {
-                    var repeatCount = GetRepeatCount ;
+                    var repeatCount = GetRepeatCount;
                     if (_value.IsEmpty)
                     {
                         Seq += repeatCount;
@@ -743,6 +743,7 @@ namespace ProtonConsole2.Proton
                         _counter = repeatCount;
                     }
                 }
+                else _counter = 0;
 
                 Seq++;
 

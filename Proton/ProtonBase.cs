@@ -73,7 +73,7 @@ namespace ProtonConsole2.Proton
                 PageLength = pageLength;
             }
 
-            _fileStream = new FileStream(Path.Combine(ProtonBase.ProtonFolderPath, dbName), FileMode.Open, FileAccess.Read, FileShare.None, pageLength, false);
+            _fileStream = new FileStream(Path.Combine(ProtonBase.ProtonFolderPath, dbName), FileMode.Open, FileAccess.Read, FileShare.Read, pageLength, false);
             FileLength = _fileStream.Length;
             NPages = (int)FileLength/PageLength;
             _pageBuffer = new byte[PageLength];

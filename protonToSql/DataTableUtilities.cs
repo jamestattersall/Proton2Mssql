@@ -188,7 +188,6 @@ namespace ProtonConsole2.protonToSql
             {
                 cdSyncFromStaging.ExecuteNonQuery();
                 NeedsStagingTable = true;
-                DataTable = emptyDataTable.Clone();
             }
             catch (Exception ex)
             {

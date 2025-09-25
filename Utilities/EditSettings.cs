@@ -125,9 +125,7 @@ namespace ProtonConsole2.Utilities
 
                             MetadataLoader.LoadMetadata();
                             EntityLoader.LoadLookups(1000);
-                            EntityLoader.LoadEntities(1000);
                             EntityLoader.LoadIndexes(1000);
-                            EntityLoader.UpdateEntityNames();
                             // ProtonToSql.SqlLoader.LoadIndexes();
                         }
                         break;
@@ -145,6 +143,8 @@ namespace ProtonConsole2.Utilities
 
                             using ValuesLoader dsl = new();
                             dsl.LoadValues(3000);
+                            EntityLoader.LoadEntities(1000);
+                            EntityLoader.UpdateEntityNames();
                         }
                         break;
 

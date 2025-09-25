@@ -157,7 +157,7 @@ namespace ProtonConsole2.protonToSql
                 patsts.MoveToPage(entityId) &&
                 (ifUpdatedSince == null || ifUpdatedSince < patsts.Updated))
             {
-                ValueIndex valueIndex = new() { EntityId = entityId };
+                  ValueIndex valueIndex = new() { EntityId = entityId };
 
                 var start = vrx.FirstDataPageId;
                 if (data.MoveToPage(start))
@@ -443,7 +443,12 @@ namespace ProtonConsole2.protonToSql
 
             using Proton2Context ctx = new();
             var forSync = ctx.ValueTexts.Any();
-            var latest = ctx.Entities.Max(e => e.LastUpdated);
+            DateTime latest = DateTime.MinValue;
+            if (ctx.Entities.Any())
+            {
+              latest=ctx.Entities.Max(e => e.LastUpdated);
+            }
+                
 
             var capt = forSync ? "Updating" : "Loading";
             ctx.Database.ExecuteSql($"EXEC sp_msforeachtable 'ALTER TABLE ? NOCHECK CONSTRAINT ALL'");
