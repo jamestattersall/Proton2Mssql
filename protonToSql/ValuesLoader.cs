@@ -443,6 +443,8 @@ namespace ProtonConsole2.protonToSql
 
             using Proton2Context ctx = new();
             var forSync = ctx.ValueTexts.Any();
+            var latest = ctx.Entities.Max(e => e.LastUpdated);
+
             var capt = forSync ? "Updating" : "Loading";
             ctx.Database.ExecuteSql($"EXEC sp_msforeachtable 'ALTER TABLE ? NOCHECK CONSTRAINT ALL'");
 
@@ -460,7 +462,7 @@ namespace ProtonConsole2.protonToSql
             if (Utilities.ConfigurationManager.AppSettings.OnlyTheseEntities.Count == 0)
             {
                 nEntities = vrx.NPages;
-                nEntities = 500;
+                //nEntities = 500;
                 Log.Information($"{capt} values for {nEntities} entities..");
                 prog.WriteProgressBar(0);
                 for (int i = 1; i <= nEntities; i++)
@@ -510,7 +512,7 @@ namespace ProtonConsole2.protonToSql
                     bool success = false;
                     try
                     {
-                        success = LoadDataset(i);
+                        success = LoadDataset(i, latest);
                         //ValuesDs.Merge(EntityDs);
                     }
                     catch (Exception ex)
