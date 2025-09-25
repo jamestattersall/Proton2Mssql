@@ -457,7 +457,7 @@ namespace ProtonConsole2.protonToSql
             Func<IValueTableUtilities, bool> loadFunction = Utilities.ConfigurationManager.AppSettings.NoLoad ? Noload : writeToServer;
 
             long nEntities = 0;
-
+            int nUpdated = 0;
             var prog = new Utilities.Progress(20);
             if (Utilities.ConfigurationManager.AppSettings.OnlyTheseEntities.Count == 0)
             {
@@ -489,8 +489,10 @@ namespace ProtonConsole2.protonToSql
 
             prog.WriteProgressBar(1);
             st.Stop();
-            string str = Utilities.ConfigurationManager.AppSettings.NoLoad ? "Scanned " : "Loaded ";
-            Log.Information($"{str} in {st.Elapsed:hh\\:mm\\:ss}");
+            string str;
+            if (Utilities.ConfigurationManager.AppSettings.NoLoad) str = "scanned";
+            else str = forSync? "updated": "inserted";
+            Log.Information($"{nUpdated} entities {str} in {st.Elapsed:hh\\:mm\\:ss}");
 
             bool Noload(IValueTableUtilities u)
             {
@@ -513,7 +515,7 @@ namespace ProtonConsole2.protonToSql
                     try
                     {
                         success = LoadDataset(i, latest);
-                        //ValuesDs.Merge(EntityDs);
+                        
                     }
                     catch (Exception ex)
                     {
@@ -522,6 +524,7 @@ namespace ProtonConsole2.protonToSql
 
                     if (success)
                     {
+                        nUpdated++;
                         foreach (IValueTableUtilities u in tableUtilities)
                         {
                             if (u.DataRows.Count > nRows)
