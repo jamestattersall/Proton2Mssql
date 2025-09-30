@@ -97,5 +97,6 @@ public partial class Proton2Context : DbContext
         OnModelCreatingPartial(modelBuilder);
     }
 
+
     partial void OnModelCreatingPartial(ModelBuilder modelBuilder);
 }

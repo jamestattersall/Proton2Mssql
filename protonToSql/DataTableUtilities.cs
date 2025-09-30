@@ -7,21 +7,34 @@ using ProtonConsole2.DataContext;
 using Serilog;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Data;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using EntityType = Microsoft.EntityFrameworkCore.Metadata.Internal.EntityType;
 
 namespace ProtonConsole2.protonToSql
 {
+
     interface IValueTableUtilities : IDisposable
     {
         void SyncFromStaging();
-        void BulkInsert(bool forSync = false);
+        void BulkLoad();
+        void SwitchTables();
+        void MergeTables();
         DataRowCollection DataRows { get;  }
     }
 
-    internal abstract class TableUtilities<T> : IDisposable, IValueTableUtilities
+    public static class MyExtensions
+    {
+        public static IQueryable<object> Set(this DbContext _context, Type t)
+        {
+            return (IQueryable<object>)_context.GetType().GetMethod("Set").MakeGenericMethod(t).Invoke(_context, null);
+        }
+    }
+
+    internal abstract class TableUtilities<T> : IDisposable, IValueTableUtilities where T : class 
     {
         protected static readonly string tableName;
         protected static readonly string sqlCreateStagingTable;
@@ -30,7 +43,6 @@ namespace ProtonConsole2.protonToSql
         protected static readonly string sqlUpsert;
         protected static string sqlSyncFromStaging;
         protected static PropertyInfo[] propertyInfos;
-        protected static readonly Proton2Context ctx = new();
         protected static List<string> nonKeyColumnNames = [];
         protected static List<string> keyColumnNames = [];
         protected static string stagingTableName;
@@ -39,13 +51,17 @@ namespace ProtonConsole2.protonToSql
         public SqlBulkCopy sqlBulkCopy;
         protected SqlCommand cdCreateStagingTable;
         protected SqlCommand cdSyncFromStaging;
-        protected DataTable DataTable = new();
+        protected DataTable dtReading = new();
+        protected DataTable dtWriting = new();  //used for asynchronous loads with simultaneous reading from Proton .dbs and writing to SQL db 
         protected bool NeedsStagingTable = true;
+        protected bool forSync = true;
+        protected static Proton2Context ctx = new();
 
 
         static TableUtilities()
         {
             var t = typeof(T);
+
             var entityType = ctx.Model.FindEntityType(t);
             string? tn = null;
             if (entityType != null)
@@ -54,7 +70,8 @@ namespace ProtonConsole2.protonToSql
             }
             if (tn == null) throw new Exception($"Type {t.FullName} not in datasets");
             tableName = tn;
-            stagingTableName=Sql.StagingTableName(tableName);
+            stagingTableName = Sql.StagingTableName(tableName);
+
 
             //exclude ref properties apart from strings properties, order by derived properties first.
             propertyInfos = [.. t.GetProperties().Where(p => !p.PropertyType.IsClass || p.PropertyType == typeof(string)).OrderBy(o => o.DeclaringType == t)];
@@ -70,6 +87,7 @@ namespace ProtonConsole2.protonToSql
             }
 
             if (keyColumnNames.Count == 0)
+            {
                 foreach (PropertyInfo p in propertyInfos)
                 {
                     foreach (System.Attribute attr in p.GetCustomAttributes())
@@ -80,6 +98,7 @@ namespace ProtonConsole2.protonToSql
                         }
                     }
                 }
+            }
 
             foreach (PropertyInfo p in propertyInfos)
             {
@@ -89,7 +108,6 @@ namespace ProtonConsole2.protonToSql
                     nonKeyColumnNames.Add(sname);
                 }
             }
-
             
             for (int i = 0; i < propertyInfos.Length; i++)
             {
@@ -110,20 +128,33 @@ namespace ProtonConsole2.protonToSql
         public TableUtilities()
         {
             cnn = new(Utilities.ConfigurationManager.AppSettings.SQLConnectionString());
-            sqlBulkCopy = new(Utilities.ConfigurationManager.AppSettings.SQLConnectionString());
+            sqlBulkCopy = new(Utilities.ConfigurationManager.AppSettings.SQLConnectionString(), SqlBulkCopyOptions.TableLock);
             if (cnn.State != ConnectionState.Open) cnn.Open();
 
-            DataTable = emptyDataTable.Clone();
+            dtReading = emptyDataTable.Clone();
             NeedsStagingTable = true;
             cdCreateStagingTable = new(Sql.sqlCreateStagingTable(tableName), cnn);
+            cdCreateStagingTable.CommandTimeout = 500;
             cdSyncFromStaging = new(sqlSyncFromStaging, cnn);
+            cdSyncFromStaging.CommandTimeout = 500;
+
+            forSync = ctx.Set<T>().Any();
+
         }
 
-                       
+        public void SwitchTables()
+        {
+            dtWriting = dtReading.Copy();
+            dtReading.Clear();
+        }
+
+        public void MergeTables()
+        {
+            dtWriting = dtReading;
+        }
 
         private void CreateDataTable(List<T> values)
         {
-            DataTable=emptyDataTable.Clone();
             foreach (T val in values)
             {
                 var vals = new object[propertyInfos.Length];
@@ -131,34 +162,28 @@ namespace ProtonConsole2.protonToSql
                 {
                     vals[i] = propertyInfos[i].GetValue(val)!;
                 }
-                DataTable.Rows.Add(vals);
+                dtReading.Rows.Add(vals);
             }
         }
 
-        public void BulkSync(List<T> values)
+        public void BulkLoad(List<T> values)
         {
             CreateDataTable(values);
-            BulkInsert(true);
-            SyncFromStaging();
+            BulkLoad();
+            if(forSync) SyncFromStaging();
         }
 
-        public void BulkInsert(List<T> values)
-        {
-            CreateDataTable(values);
-            BulkInsert(false);
-        }
-
-        public DataRowCollection DataRows => DataTable.Rows;
+        public DataRowCollection DataRows => dtReading.Rows;
   
-        public void BulkInsert(bool toStaging = false)
+        public void BulkLoad()
         {
-            if (toStaging && NeedsStagingTable) CreateStagingTable();
+
+            if (forSync && NeedsStagingTable) CreateStagingTable();
 
             try
             {
-                sqlBulkCopy.DestinationTableName = toStaging ? stagingTableName : tableName;
-                sqlBulkCopy.WriteToServer(DataTable);
-                DataTable = emptyDataTable.Clone();
+                sqlBulkCopy.DestinationTableName = forSync ? stagingTableName : tableName;
+                sqlBulkCopy.WriteToServer(dtWriting);
             }
             catch (Exception ex)
             {
@@ -183,17 +208,20 @@ namespace ProtonConsole2.protonToSql
 
         public void SyncFromStaging()
         {
-            if (cnn.State != ConnectionState.Open)  cnn.Open();
-            try
+            if (forSync)
             {
-                cdSyncFromStaging.ExecuteNonQuery();
-                NeedsStagingTable = true;
-            }
-            catch (Exception ex)
-            {
-                Log.Error(ex, @$"Unable to sync {stagingTableName}
+                if (cnn.State != ConnectionState.Open) cnn.Open();
+                try
+                {
+                    cdSyncFromStaging.ExecuteNonQuery();
+                    NeedsStagingTable = true;
+                }
+                catch (Exception ex)
+                {
+                    Log.Error(ex, @$"Unable to sync {stagingTableName}
 {sqlSyncFromStaging}
 ");
+                }
             }
         }
 
@@ -210,6 +238,9 @@ namespace ProtonConsole2.protonToSql
 
     internal class ValueTableUtilities<T> : TableUtilities<T> where T : class
     {
+        private int maxId = 0;
+        private SqlCommand cdMaxEntityId;
+
         static ValueTableUtilities()
         {
             string sqlDeleteFromStaging = Sql.sqlValuesDeleteFromStaging(tableName, [.. keyColumnNames]); ;
@@ -220,12 +251,26 @@ namespace ProtonConsole2.protonToSql
             sb.AppendLine(sqlUpsert);
             sb.AppendLine(sqlDeleteStagingTable);
             sqlSyncFromStaging = sb.ToString();
-
         }
+
+        public ValueTableUtilities()
+        {
+            SwitchTables();
+
+            cdMaxEntityId = new SqlCommand(Sql.sqlMaxEntityId(tableName), cnn);
+            cdMaxEntityId.CommandTimeout = 500;
+            if (forSync)
+            {
+                maxId=(int)cdMaxEntityId.ExecuteScalar();
+            }
+        }
+
     }
 
     internal class MetaTableUtilities<T> : TableUtilities<T> where T : class
     {
+        public SqlCommand cdTruncateTable;
+
         static MetaTableUtilities()
         {
             string sqlDeleteFromStaging = Sql.sqlMetadataDeleteFromStaging(tableName, [.. keyColumnNames]);
@@ -237,6 +282,19 @@ namespace ProtonConsole2.protonToSql
             sb.AppendLine(sqlDeleteStagingTable);
             sqlSyncFromStaging = sb.ToString();
 
+        }
+
+        public MetaTableUtilities()
+        {
+            dtWriting = dtReading; //disable async
+            cdTruncateTable = new(Sql.sqlTruncateTable(tableName), cnn);
+            cdTruncateTable.CommandTimeout = 500;
+        }
+
+        public void TruncateTable()
+        {
+            cdTruncateTable.ExecuteNonQuery();
+            forSync = false;
         }
     }
 }

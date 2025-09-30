@@ -49,7 +49,7 @@ namespace ProtonConsole2.protonToSql
 
             using Proton.Item item = new();
             using Proton.Valid valid = new();
-            for (int i = 1; i <= item.NPages; i++)
+            for (int i = 1; i <=item.NPages; i++)
             {
                 if (item.MoveToPage(i) &&
                     item.IsInstalled &&
@@ -151,13 +151,13 @@ namespace ProtonConsole2.protonToSql
         }
 
 
-        public bool LoadDataset(int entityId, DateTime? ifUpdatedSince = null)
+        public bool LoadDataRows(int entityId, DateTime? ifUpdatedSince = null)
         {
             if (vrx.MoveToPage(entityId) &&
                 patsts.MoveToPage(entityId) &&
                 (ifUpdatedSince == null || ifUpdatedSince < patsts.Updated))
             {
-                  ValueIndex valueIndex = new() { EntityId = entityId };
+                ValueIndex valueIndex = new() { EntityId = entityId };
 
                 var start = vrx.FirstDataPageId;
                 if (data.MoveToPage(start))
@@ -433,24 +433,22 @@ namespace ProtonConsole2.protonToSql
         public void LoadValues(int nRows)
         {
             var st = Stopwatch.StartNew();
-            foreach(IValueTableUtilities u in tableUtilities)
-            {
-                u.DataRows.Clear();
-            }
 
+            foreach (IValueTableUtilities u in tableUtilities)
+            {
+                u.SwitchTables();
+            }
 
             int counter = 0;
 
             using Proton2Context ctx = new();
-            var forSync = ctx.ValueTexts.Any();
+
             DateTime latest = DateTime.MinValue;
             if (ctx.Entities.Any())
             {
               latest=ctx.Entities.Max(e => e.LastUpdated);
             }
-                
-
-            var capt = forSync ? "Updating" : "Loading";
+                         
             ctx.Database.ExecuteSql($"EXEC sp_msforeachtable 'ALTER TABLE ? NOCHECK CONSTRAINT ALL'");
 
             using SqlBulkCopy bkc = new(Utilities.ConfigurationManager.AppSettings.SQLConnectionString(),
@@ -459,88 +457,126 @@ namespace ProtonConsole2.protonToSql
                 BatchSize = nRows * 2
             };
 
-            Func<IValueTableUtilities, bool> loadFunction = Utilities.ConfigurationManager.AppSettings.NoLoad ? Noload : writeToServer;
-
             long nEntities = 0;
             int nUpdated = 0;
             var prog = new Utilities.Progress(20);
+
+            Action<int> loadFunction = Utilities.ConfigurationManager.AppSettings.NoLoad ? Noload : Process;
+
+            latest = DateTime.MinValue;
             if (Utilities.ConfigurationManager.AppSettings.OnlyTheseEntities.Count == 0)
             {
                 nEntities = vrx.NPages;
                 //nEntities = 500;
-                Log.Information($"{capt} values for {nEntities} entities..");
+                Log.Information($"Loading values for {nEntities} entities..");
                 prog.WriteProgressBar(0);
+   
                 for (int i = 1; i <= nEntities; i++)
                 {
-                    Process(i);
+                    loadFunction(i);
                 }
             }
             else
             {
                 nEntities = Utilities.ConfigurationManager.AppSettings.OnlyTheseEntities.Count;
-                Log.Information($"{capt} values for {nEntities} entities..");
+                Log.Information($"Loading values for {nEntities} entities..");
                 prog.WriteProgressBar(0);
                 foreach (int i in Utilities.ConfigurationManager.AppSettings.OnlyTheseEntities)
                 {
-                    Process(i);
+                    loadFunction(i);
                 }
             }
 
+            List<Task> tasks = [];
+
             foreach (IValueTableUtilities u in tableUtilities)
             {
-                u.BulkInsert(forSync);
-                if (forSync) u.SyncFromStaging();
+                //save to SQL any remaining rows in writing table not yet saved
+                //run simultaneously
+                tasks.Add(Task.Run(() =>
+                {
+                    //send to SQL db 
+                    u.BulkLoad();
+                    u.SyncFromStaging();
+                }));
             }
+            
+            Task.WaitAll(tasks);
+            tasks.Clear();
+
+            foreach (IValueTableUtilities u in tableUtilities)
+            { 
+                //switch to the reading table, populated from data from Proton .dbs at the ultimate iteration
+                u.SwitchTables();
+                tasks.Add(Task.Run(() =>
+                {
+                    //save to SQL any remaining rows in table not yet saved
+                    //run simultaneously
+                    u.BulkLoad();
+                    u.SyncFromStaging();
+                }));
+            }
+
+            Task.WaitAll(tasks);
 
             prog.WriteProgressBar(1);
             st.Stop();
             string str;
             if (Utilities.ConfigurationManager.AppSettings.NoLoad) str = "scanned";
-            else str = forSync? "updated": "inserted";
+            else str = "loaded";
             Log.Information($"{nUpdated} entities {str} in {st.Elapsed:hh\\:mm\\:ss}");
 
-            bool Noload(IValueTableUtilities u)
+            void Noload(int i)
             {
-                u.DataRows.Clear();
-                return true;
+                counter++;
+                LoadDataRows(i, latest);
+                prog.WriteProgressBar(counter / (float)nEntities);
             }
 
-            bool writeToServer(IValueTableUtilities u)
-            {
-                u.SyncFromStaging();
-                return true;
-            }
 
             void Process(int i)
             {
                 counter++;
-                if (vrx.MoveToPage(i))
+            
+                List<Task> tasks = [];
+                List<IValueTableUtilities> toSwitchTables = [];
+                //tasks in list to run sumultaneously
+                foreach (IValueTableUtilities u in tableUtilities)
                 {
-                    bool success = false;
-                    try
+                    //DataTables already populated from previous load from Proton .dbs files
+                    if (u.DataRows.Count > nRows)
                     {
-                        success = LoadDataset(i, latest);
-                        
-                    }
-                    catch (Exception ex)
-                    {
-                        Log.Error(ex, $"Unable to load data for entity {i}");
-                    }
-
-                    if (success)
-                    {
-                        nUpdated++;
-                        foreach (IValueTableUtilities u in tableUtilities)
+                        toSwitchTables.Add(u);
+                        //simultaneously process 'full' datatables
+                        tasks.Add(Task.Run(() =>
                         {
-                            if (u.DataRows.Count > nRows)
-                            {
-                                u.BulkInsert(forSync);
-                                if (forSync) u.SyncFromStaging();
-                            }
-                        }
+                            //send to SQL db 
+                            u.BulkLoad();
+                            u.SyncFromStaging();
+                        }));
                     }
-                    prog.WriteProgressBar(counter / (float)nEntities);
                 }
+                tasks.Add(Task.Run(() =>
+                {
+                    //simultaneous new load from Proton .dbs files
+                    LoadDataRows(i, latest);
+                }));
+
+                Task.WaitAll(tasks); //wait (block main thread) until all tasks complete
+
+                foreach(IValueTableUtilities u in toSwitchTables)
+                {
+                    //for data sent to SQL db at current iteration.
+                    //copy rows in table read from Proton .dbs to table to be sent to SQL at next iteration
+                    //and clear table to recieve data from Proton .dbs at next iteration
+                    u.SwitchTables();
+                }
+
+                
+                nUpdated++;
+
+                prog.WriteProgressBar(counter / (float)nEntities);
+                
             }
         }
 

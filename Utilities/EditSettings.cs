@@ -142,7 +142,7 @@ namespace ProtonConsole2.Utilities
                                 .CreateLogger();
 
                             using ValuesLoader dsl = new();
-                            dsl.LoadValues(3000);
+                            dsl.LoadValues(1000);
                             EntityLoader.LoadEntities(1000);
                             EntityLoader.UpdateEntityNames();
                         }

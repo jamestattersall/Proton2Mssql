@@ -23,18 +23,11 @@ namespace ProtonConsole2.protonToSql
             using Proton.RCode code = new();
             using Proton2Context ctx = new();
 
-            bool exists = ctx.Lookups.Any();
-     
             int c = 0;
             var prog = new Utilities.Progress(20);
-            if (exists)
-            {
-                Console.WriteLine("Updating Lookups..");
-            }
-            else
-            {
-                Console.WriteLine("Loading Lookups..");
-            }
+        
+            Console.WriteLine("Loading Lookups..");
+            
             prog.WriteProgressBar(0);
             var nDicts = dict.NPages;
             var tPages = nDicts + code.NPages;
@@ -47,7 +40,8 @@ namespace ProtonConsole2.protonToSql
                     c++;
                     if (c > nRows)
                     {
-                        tableUtilities.BulkInsert(exists);
+                        tableUtilities.BulkLoad();
+                        tableUtilities.DataRows.Clear();
                         c = 0;
 
                         prog.WriteProgressBar(i / (float)tPages);
@@ -62,16 +56,17 @@ namespace ProtonConsole2.protonToSql
                     c++;
                     if (c > nRows)
                     {
-                        tableUtilities.BulkInsert(exists);
+                        tableUtilities.BulkLoad();
+                        tableUtilities.DataRows.Clear();
                         c = 0;
 
                         prog.WriteProgressBar((i + nDicts) / (float)tPages);
                     }
                 }
             }
-            tableUtilities.BulkInsert(exists);
+            tableUtilities.BulkLoad();
 
-            if (exists)tableUtilities.SyncFromStaging();
+            tableUtilities.SyncFromStaging();
            
             prog.WriteProgressBar(1);
         }
@@ -110,14 +105,16 @@ namespace ProtonConsole2.protonToSql
                     c++;
                     if (c > nRows)
                     {
-                        tableUtilities.BulkInsert(exists);
+                        tableUtilities.BulkLoad();
+                        if (exists) tableUtilities.SyncFromStaging();
+                        tableUtilities.DataRows.Clear();
                         c = 0;
                         
                         prog.WriteProgressBar(i / (float)tPages);
                     }
                 }
             }
-            tableUtilities.BulkInsert(exists);
+            tableUtilities.BulkLoad();
             if (exists) tableUtilities.SyncFromStaging();
 
             prog.WriteProgressBar(1);
@@ -133,24 +130,17 @@ namespace ProtonConsole2.protonToSql
             using Proton.KeyDef keydef = new();
             using Proton.IndexDef indexdef = new();
             using Proton2Context ctx = new();
-            using SqlBulkCopy bkc = new(Utilities.ConfigurationManager.AppSettings.SQLConnectionString())
-            {
-                DestinationTableName="Indexes",
-                BatchSize=nRows,
-                BulkCopyTimeout=1000,
-            };
+
 
             var prog = new Utilities.Progress(20);
-            if (ctx.Indexes.Any())
-            {
-                Console.WriteLine("Deleting old indexes..");
-                ctx.Database.ExecuteSqlRaw("DELETE Indexes");
-            }
+    
             int c = 0;
             int tc = 0;
             int cc = 0;
 
-            Console.WriteLine("Counting new indexes..");
+           Console.WriteLine("Deleting old indexes..");
+            tableUtilities.TruncateTable();
+
             for (int i = 1; i <= index.NPages; i++)
             {
                 if (index.MoveToPage(i))
@@ -158,6 +148,8 @@ namespace ProtonConsole2.protonToSql
                     tc += index.BlocksOnPage;
                 }
             }
+
+
             Console.WriteLine("Loading indexes..");
             prog.WriteProgressBar(0);
             for (short i = 1; i <= indexdef.NPages; i++)
@@ -188,7 +180,8 @@ namespace ProtonConsole2.protonToSql
                             cc++;
                             if (c > nRows)
                             {
-                                tableUtilities.BulkInsert();
+                                tableUtilities.BulkLoad();
+                                tableUtilities.DataRows.Clear();
                                 c = 0;
                                 prog.WriteProgressBar((float)cc / (float)tc);
                             }
@@ -196,7 +189,8 @@ namespace ProtonConsole2.protonToSql
                     }
                 }
             }
-            tableUtilities.BulkInsert(); 
+            tableUtilities.BulkLoad(); 
+            tableUtilities.SyncFromStaging();
             prog.WriteProgressBar(1);
             Console.WriteLine();
 

@@ -84,8 +84,8 @@ WHERE s.{keyColumnNames[0]} is null";
 
             return $@"
 IF OBJECT_ID('{stagingTableName}') IS NOT NULL  
-DROP TABLE [{stagingTableName}]
-
+TRUNCATE TABLE [{stagingTableName}]
+ELSE
 SELECT TOP 0 * 
 INTO [{stagingTableName}]
 FROM [{tableName}]";
@@ -96,6 +96,7 @@ FROM [{tableName}]";
             var stagingTableName = StagingTableName(tableName);
 
             return $@"
+IF OBJECT_ID(N'PK_staging_{tableName}')IS NULL
 ALTER TABLE [{stagingTableName}]
    ADD CONSTRAINT PK_staging_{tableName} PRIMARY KEY CLUSTERED ({string.Join(", ", keyColumnNames)})";
 
@@ -153,5 +154,12 @@ TRUNCATE TABLE [{tablename}]
         {
             return $"EXEC sp_msforeachtable 'ALTER TABLE ? NOCHECK CONSTRAINT ALL'";
         }
+
+        public static string sqlMaxEntityId(string tablename)
+        {
+            return $"SELECT MAX(EntityId) FROM {tablename}";
+        }
+
+     
     }
 }

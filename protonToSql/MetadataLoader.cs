@@ -10,6 +10,7 @@ using System.Diagnostics;
 using System.Text.Json;
 using ProtonConsole2.protonToSql;
 using Serilog;
+using ProtonConsole2.DataContext.ProtonUi;
 
 namespace ProtonConsole2.ProtonToSql
 {
@@ -68,163 +69,41 @@ namespace ProtonConsole2.ProtonToSql
             float  c = 1;
             Log.Information("Loading /updating metadata");
 
-            if (ctx.DataTypes.Any())
-            {
-                using MetaTableUtilities<DataType> mtu = new();
-                mtu.BulkSync(MetaDataFunctions.GetDataTypes());
-            } else
-            {
-                using MetaTableUtilities<DataType> mtu = new();
-                mtu.BulkInsert(MetaDataFunctions.GetDataTypes());
-            }
+            new MetaTableUtilities<DataType>().BulkLoad(MetaDataFunctions.GetDataTypes());
+
             progress.WriteProgressBar(c / nTables); c++;
-            ctx.SaveChanges();
+            new MetaTableUtilities<Table>().BulkLoad(MetaDataFunctions.GetTables());
 
-            if (ctx.Tables.Any())
-            {
-                using MetaTableUtilities<Table> mtu = new();
-                mtu.BulkSync(MetaDataFunctions.GetTables());
-            }
-            else
-            {
-                using MetaTableUtilities<Table> mtu = new();
-                mtu.BulkInsert(MetaDataFunctions.GetTables());
-            }
             progress.WriteProgressBar(c / nTables); c++;
-       
+            new MetaTableUtilities<View>().BulkLoad(MetaDataFunctions.GetViews());
 
-
-            if (ctx.Views.Any())
-            {
-                using MetaTableUtilities<View> mtu = new();
-                mtu.BulkSync(MetaDataFunctions.GetViews());
-            }
-            else
-            {
-                using MetaTableUtilities<View> mtu = new();
-                mtu.BulkInsert(MetaDataFunctions.GetViews());
-            }
             progress.WriteProgressBar(c / nTables); c++;
-           
+            new MetaTableUtilities<EntityType>().BulkLoad(MetaDataFunctions.GetEntityTypes());
 
-            if (ctx.EntityTypes.Any())
-            {
-                using MetaTableUtilities<EntityType> mtu = new();
-                mtu.BulkSync(MetaDataFunctions.GetEntityTypes());
-            }
-            else
-            {
-                using MetaTableUtilities<EntityType> mtu = new();
-                mtu.BulkInsert(MetaDataFunctions.GetEntityTypes());
-            }
-            progress.WriteProgressBar(c/ nTables); c++;
-            ctx.SaveChanges();
-
-            if (ctx.IndexTypes.Any())
-            {
-                using MetaTableUtilities<IndexType> mtu = new();
-                mtu.BulkSync(MetaDataFunctions.GetIndexTypes());
-            }
-            else
-            {
-                using MetaTableUtilities<IndexType> mtu = new();
-                mtu.BulkInsert(MetaDataFunctions.GetIndexTypes());
-            }
             progress.WriteProgressBar(c / nTables); c++;
-            ctx.SaveChanges();
+            new MetaTableUtilities<IndexType>().BulkLoad(MetaDataFunctions.GetIndexTypes());
 
-           
-            if (ctx.Attributes.Any())
-            {
-                using MetaTableUtilities<DataContext.Attribute> mtu = new();
-                mtu.BulkSync(MetaDataFunctions.GetAttributes());
-            }
-            else
-            {
-                using MetaTableUtilities<DataContext.Attribute> mtu = new();
-                mtu.BulkInsert(MetaDataFunctions.GetAttributes());
-            }
             progress.WriteProgressBar(c / nTables); c++;
-            ctx.SaveChanges();
+            new MetaTableUtilities<DataContext.Attribute>().BulkLoad(MetaDataFunctions.GetAttributes());
 
-            
-
-            if (ctx.ViewAttributes.Any())
-            {
-                using MetaTableUtilities<DataContext.ViewAttribute> mtu = new();
-                mtu.BulkSync(MetaDataFunctions.GetViewAttributes());
-            }
-            else
-            {
-                using MetaTableUtilities<DataContext.ViewAttribute> mtu = new();
-                mtu.BulkInsert(MetaDataFunctions.GetViewAttributes());
-            }
             progress.WriteProgressBar(c / nTables); c++;
-            ctx.SaveChanges();
+            new MetaTableUtilities<ViewAttribute>().BulkLoad(MetaDataFunctions.GetViewAttributes());
 
-            if (ctx.ViewCaptions.Any())
-            {
-                using MetaTableUtilities<DataContext.ViewCaption> mtu = new();
-                mtu.BulkSync(MetaDataFunctions.GetViewCaptions());
-            }
-            else
-            {
-                using MetaTableUtilities<DataContext.ViewCaption> mtu = new();
-                mtu.BulkInsert(MetaDataFunctions.GetViewCaptions());
-            }
             progress.WriteProgressBar(c / nTables); c++;
-            ctx.SaveChanges();
+            new MetaTableUtilities<ViewCaption>().BulkLoad(MetaDataFunctions.GetViewCaptions());
 
-
-            if (ctx.LookupTypes.Any())
-            {
-                using MetaTableUtilities<DataContext.LookupType> mtu = new();
-                mtu.BulkSync(MetaDataFunctions.GetLookupTypes());
-            }
-            else
-            {
-                using MetaTableUtilities<DataContext.LookupType> mtu = new();
-                mtu.BulkInsert(MetaDataFunctions.GetLookupTypes());
-            }
             progress.WriteProgressBar(c / nTables); c++;
-            ctx.SaveChanges();
+            new MetaTableUtilities<LookupType>().BulkLoad(MetaDataFunctions.GetLookupTypes());
 
-            if (ctx.Menus.Any())
-            {
-                using MetaTableUtilities<DataContext.Menu> mtu = new();
-                mtu.BulkSync(MetaDataFunctions.GetMenus());
-            }
-            else
-            {
-                using MetaTableUtilities<DataContext.Menu> mtu = new();
-                mtu.BulkInsert(MetaDataFunctions.GetMenus());
-            }
             progress.WriteProgressBar(c / nTables); c++;
-            ctx.SaveChanges();
+            new MetaTableUtilities<DataContext.Menu>().BulkLoad(MetaDataFunctions.GetMenus());
 
-            if (ctx.MenuItems.Any())
-            {
-                using MetaTableUtilities<DataContext.ProtonUi.MenuItem> mtu = new();
-                mtu.BulkSync(MetaDataFunctions.GetMenuItems());
-            }
-            else
-            {
-                using MetaTableUtilities<DataContext.ProtonUi.MenuItem> mtu = new();
-                mtu.BulkInsert(MetaDataFunctions.GetMenuItems());
-            }
             progress.WriteProgressBar(c / nTables); c++;
-            ctx.SaveChanges();
+            new MetaTableUtilities<MenuItem>().BulkLoad(MetaDataFunctions.GetMenuItems());
 
-            if (ctx.UserStarters.Any())
-            {
-                using MetaTableUtilities<DataContext.UserStarter> mtu = new();
-                mtu.BulkSync(MetaDataFunctions.GetUserStarters());
-            }
-            else
-            {
-                using MetaTableUtilities<DataContext.UserStarter> mtu = new();
-                mtu.BulkInsert(MetaDataFunctions.GetUserStarters());
-            }
+            progress.WriteProgressBar(c / nTables); c++;
+            new MetaTableUtilities<UserStarter>().BulkLoad(MetaDataFunctions.GetUserStarters());
+    
             progress.WriteProgressBar(1);
             ctx.SaveChanges();
 
