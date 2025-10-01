@@ -106,7 +106,6 @@ namespace ProtonConsole2.protonToSql
                     if (c > nRows)
                     {
                         tableUtilities.BulkLoad();
-                        if (exists) tableUtilities.SyncFromStaging();
                         tableUtilities.DataRows.Clear();
                         c = 0;
                         

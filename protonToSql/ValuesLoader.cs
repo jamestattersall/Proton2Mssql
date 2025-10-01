@@ -463,7 +463,6 @@ namespace ProtonConsole2.protonToSql
 
             Action<int> loadFunction = Utilities.ConfigurationManager.AppSettings.NoLoad ? Noload : Process;
 
-            latest = DateTime.MinValue;
             if (Utilities.ConfigurationManager.AppSettings.OnlyTheseEntities.Count == 0)
             {
                 nEntities = vrx.NPages;

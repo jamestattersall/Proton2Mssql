@@ -125,7 +125,6 @@ namespace ProtonConsole2.Utilities
 
                             MetadataLoader.LoadMetadata();
                             EntityLoader.LoadLookups(1000);
-                            EntityLoader.LoadIndexes(1000);
                             // ProtonToSql.SqlLoader.LoadIndexes();
                         }
                         break;
@@ -143,6 +142,25 @@ namespace ProtonConsole2.Utilities
 
                             using ValuesLoader dsl = new();
                             dsl.LoadValues(1000);
+                            EntityLoader.LoadIndexes(1000);
+                            EntityLoader.LoadEntities(1000);
+                            EntityLoader.UpdateEntityNames();
+                        }
+                        break;
+
+                    case 12:
+                        if (apsettings.IsValid())
+                        {
+                            //ProtonToSql.SqlLoader.LoadEntityInstances(200);
+                            Log.Logger = new LoggerConfiguration()
+                                .MinimumLevel.Debug()
+                                .WriteTo.Console()
+                                .WriteTo.File(ConfigurationManager.AppSettings.PathToLogs + "AppLog.txt", rollingInterval: RollingInterval.Day)
+                                .CreateLogger();
+
+                            //using ValuesLoader dsl = new();
+                            //dsl.LoadValues(1000);
+                            EntityLoader.LoadIndexes(1000);
                             EntityLoader.LoadEntities(1000);
                             EntityLoader.UpdateEntityNames();
                         }
