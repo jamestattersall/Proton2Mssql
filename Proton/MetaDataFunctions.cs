@@ -1,6 +1,9 @@
 ﻿
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
+using Microsoft.Extensions.Primitives;
 using ProtonConsole2.DataContext;
 using ProtonConsole2.DataContext.ProtonUi;
+using System.Text;
 
 namespace ProtonConsole2.Proton
 {
@@ -155,7 +158,7 @@ namespace ProtonConsole2.Proton
                 {
                     short tableId = (itm.GroupId == 0) ? (short)-itm.EntityTypeId : itm.GroupId;
 
-                    Table? tbl = list.GetValueOrDefault(tableId);
+                    DataContext.Table? tbl = list.GetValueOrDefault(tableId);
                     if (tbl == null)
                     {
                         tbl = new()
@@ -304,6 +307,7 @@ namespace ProtonConsole2.Proton
             {
                 if (menu.MoveToPage(i))
                 {
+              
                     byte c = 0;
                     while (menu.MoveToNextBlock())
                     {
@@ -382,9 +386,9 @@ namespace ProtonConsole2.Proton
         }
 
 
-        public static List<View> GetViews()
+        public static List<DataContext.View> GetViews()
         {
-            List<View> list = [];
+            List<DataContext.View> list = [];
 
             using (Proton.Screen scrn = new())
             using (Proton.ScrTxt scrtxt = new())
@@ -392,68 +396,65 @@ namespace ProtonConsole2.Proton
             using (Proton.Menu menu = new())
             using (Proton.TrGroup grp = new())
 
-                for (short ix = 1; ix <= scrn.NPages; ix++)
+            for (short ix = 1; ix <= scrn.NPages; ix++)
+            {
+                if (scrn.MoveToPage(ix))
                 {
-                    if (scrn.MoveToPage(ix) && itm.MoveToPage(scrn.ItemId))
+                    var scrObj = new DataContext.View()
                     {
-                        var scrObj = new View()
-                        {
-                            Id = ix,
-                            Name = scrn.Name,
-                            TableId = itm.GroupId == 0 ? (short)-itm.EntityTypeId : itm.GroupId,
-                            EntityTypeId = itm.EntityTypeId,
-                            NRows = scrn.RowCount,
-                            NItems = scrn.ItemCount
-                        };
+                        Id = ix,
+                        NRows = scrn.RowCount,
+                        NItems = scrn.ItemCount
+                    };
 
-                        if (scrn.MoveToPage(itm.GroupId))
+                     if (grp.MoveToPage(ix) && itm.MoveToPage(grp.DateItemId))
+                    {
+                        scrObj.TableId = itm.GroupId == 0 ? (short)-itm.EntityTypeId : itm.GroupId;
+                        scrObj.EntityTypeId = itm.EntityTypeId;
+                    }
+                    else
+                    {
+                        while (scrn.MoveToNextBlock() && itm.MoveToPage(scrn.ItemId))
                         {
-                            if (scrn.Name.Length > scrObj.Name.Length)
-                            {
-                                scrObj.Name = scrn.Name;
-                            }
-                            scrn.MoveToPage(ix);
+                            scrObj.TableId = itm.GroupId == 0 ? (short)-itm.EntityTypeId : itm.GroupId;
+                            scrObj.EntityTypeId = itm.EntityTypeId;
+                            break;
                         }
-                        if (grp.MoveToPage(itm.GroupId))
-                        {
-                            if (grp.Name.Length > scrObj.Name.Length)
-                            {
-                                scrObj.Name = grp.Name;
-                            }
-                        }
-                        bool breakLoop = false;
-                        for (short ixm = 1; ixm <= menu.NPages; ixm++)
-                        {
-                            if (menu.MoveToPage(ixm))
-                            {
-                                while (menu.MoveToNextBlock())
-                                {
-                                    if (menu.Function == "SCRN" && menu.Parameter1 == ix)
-                                    {
-                                        if (scrObj.Name.Length > menu.ItemName.Length)
-                                        {
-                                            scrObj.Name = menu.ItemName;
-                                            breakLoop = true;
-                                            break;
-                                        }
-                                    }
-                                }
-                                if (breakLoop) break;
-                            }
-                        }
+                    }
+         
+                    if (scrObj.TableId != 0 && scrObj.EntityTypeId != 0)
+                    {
 
                         if (scrtxt.MoveToPage(ix))
                         {
-                            string nm = scrtxt.Text.Replace("date of", "", StringComparison.CurrentCultureIgnoreCase).Replace("date at", "", StringComparison.OrdinalIgnoreCase).Replace("date", "", StringComparison.OrdinalIgnoreCase).Trim();
-                            if (nm.Length > scrObj.Name.Length)
+                            var sb = new StringBuilder();
+                            SortedList<int,string> capts = [];
+                            byte miny = 255;
+                            while (scrtxt.MoveToNextBlock())
                             {
-                                scrObj.Name = nm;
+                                //get Y value to top row
+                                if (scrtxt.Y < miny) miny = scrtxt.Y;
                             }
-  
+                            scrtxt.MoveToFirstBlock();
+                            while (scrtxt.MoveToNextBlock())
+                            {
+                                if (scrtxt.Y==miny && !scrtxt.Text.StartsWith('['))
+                                {
+                                    capts.Add(scrtxt.X, scrtxt.Text);
+                                }
+                            }
+                            foreach(string cap in capts.Values)
+                            {
+                                sb.Append(cap + " ");
+                            }
+
+                            scrObj.Name = sb.ToString().Trim();
                         }
+
                         list.Add(scrObj);
                     }
                 }
+            }
 
             return list;
         }

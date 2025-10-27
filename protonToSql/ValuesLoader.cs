@@ -80,10 +80,10 @@ namespace ProtonConsole2.protonToSql
                                                         (item.SubType == 0) ? ProcessUint32 : ProcessInt32),
                         5 => new(tableUtilities[(short)ValueTable.ValueNumbers],
                                                         (qual || mod) ? ProcessCompositeSingle : ProcessSingle,
-                                                        0, tableUtilities[(short)ValueTable.ValueLookups]),
+                                                        item.SubType, tableUtilities[(short)ValueTable.ValueLookups]),
                         6 => new(tableUtilities[(short)ValueTable.ValueNumbers],
                                                         (qual || mod) ? ProcessCompositeDouble : ProcessDouble,
-                                                        0, tableUtilities[(short)ValueTable.ValueLookups]),
+                                                        item.SubType, tableUtilities[(short)ValueTable.ValueLookups]),
                         7 => new(tableUtilities[(short)ValueTable.ValueLookups],
                                                         ProcessDict),
                         8 => new(tableUtilities[(short)ValueTable.ValueDates],
@@ -192,7 +192,7 @@ namespace ProtonConsole2.protonToSql
 
                         if (fn != null && !data.RawValue.IsEmpty)
                         {
-                            fn.Exec(valueIndex, data.RawValue);
+                           fn.Exec(valueIndex, data.RawValue);
                         }
                         blockIsValid = data.MoveToNextBlock();
                     }
@@ -252,9 +252,9 @@ namespace ProtonConsole2.protonToSql
             dataRows.Add(valueIndex.EntityId, valueIndex.AttributeId, valueIndex.Seq, ProtonDbFileReader.GetInt32(GetMemory(data, 4)));
         }
 
-        private static bool CheckFloat(float res, ValueIndex valueIndex)
+        private static bool CheckFloat(Single res, ValueIndex valueIndex)
         {
-            if (!float.IsFinite(res))
+            if (!Single.IsFinite(res))
             {
                 Log.Warning($"Abnormal number {res}, entity:{valueIndex.EntityId}, attribute:{valueIndex.AttributeId}, Seq:{valueIndex.Seq}");
                 return false;
@@ -262,47 +262,47 @@ namespace ProtonConsole2.protonToSql
             return true;
         }
 
-        private void ProcessSingle(DataRowCollection dataRows, ValueIndex valueIndex, ReadOnlyMemory<byte> data, short subTypeId = 0, DataRowCollection? dataRows2 = null)
+        private void ProcessSingle(DataRowCollection dataRows, ValueIndex valueIndex, ReadOnlyMemory<byte> data, short subTypeId, DataRowCollection? dataRows2 = null)
         {
 
-            var res = ProtonDbFileReader.GetSingle(GetMemory(data, 4));
+            Single res = ProtonDbFileReader.GetSingle(GetMemory(data, 4));
             if (CheckFloat(res, valueIndex))
             {
-                dataRows.Add(valueIndex.EntityId, valueIndex.AttributeId, valueIndex.Seq, res);
+                dataRows.Add(valueIndex.EntityId, valueIndex.AttributeId, valueIndex.Seq, Math.Round(res, subTypeId));
             }
         }
 
-        private void ProcessDouble(DataRowCollection dataRows, ValueIndex valueIndex, ReadOnlyMemory<byte> data, short subTypeId = 0, DataRowCollection? dataRows2 = null)
+        private void ProcessDouble(DataRowCollection dataRows, ValueIndex valueIndex, ReadOnlyMemory<byte> data, short subTypeId , DataRowCollection? dataRows2 = null)
         {
-            var res = ProtonDbFileReader.GetDouble(GetMemory(data, 8));
+            Single res = ProtonDbFileReader.GetDouble(GetMemory(data, 8));
             if (CheckFloat(res, valueIndex))
             {
-                dataRows.Add(valueIndex.EntityId, valueIndex.AttributeId, valueIndex.Seq, res);
+                dataRows.Add(valueIndex.EntityId, valueIndex.AttributeId, valueIndex.Seq, Math.Round(res,subTypeId));
             }
         }
 
-        private void ProcessCompositeSingle(DataRowCollection dataRows, ValueIndex valueIndex, ReadOnlyMemory<byte> data, short subTypeId = 0, DataRowCollection? dataRows2 = null)
+        private void ProcessCompositeSingle(DataRowCollection dataRows, ValueIndex valueIndex, ReadOnlyMemory<byte> data, short subTypeId, DataRowCollection? dataRows2 = null)
         {
             var com = GetCompositeSingle(data);
-            if (com.Number != null && CheckFloat((float)com.Number!, valueIndex))
+            if (com?.Number != null && CheckFloat((Single)com.Number!, valueIndex))
             {
-                dataRows.Add(valueIndex.EntityId, valueIndex.AttributeId, valueIndex.Seq, (float)Math.Round((double)com.Number));
+                dataRows.Add(valueIndex.EntityId, valueIndex.AttributeId, valueIndex.Seq, Math.Round((Single)com.Number, subTypeId));
             }
-            if (com.QualifierCodeId > 0)
+            if (com?.QualifierCodeId > 0)
             {
                 dataRows2?.Add(valueIndex.EntityId, valueIndex.AttributeId, valueIndex.Seq, com.QualifierCodeId);
             }
         }
 
-        private void ProcessCompositeDouble(DataRowCollection dataRows, ValueIndex valueIndex, ReadOnlyMemory<byte> data, short subTypeId = 0, DataRowCollection? dataRows2 = null)
+        private void ProcessCompositeDouble(DataRowCollection dataRows, ValueIndex valueIndex, ReadOnlyMemory<byte> data, short subTypeId, DataRowCollection? dataRows2 = null)
         {
             var com = GetCompositeDouble(data);
 
-            if (com.Number != null && CheckFloat((float)com.Number!, valueIndex))
+            if (com?.Number != null && CheckFloat((Single)com.Number!, valueIndex))
             {
-                dataRows.Add(valueIndex.EntityId, valueIndex.AttributeId, valueIndex.Seq, (float)Math.Round((double)com.Number));
+                dataRows.Add(valueIndex.EntityId, valueIndex.AttributeId, valueIndex.Seq, Math.Round((Single)com.Number, subTypeId));
             }
-            if (com.QualifierCodeId > 0)
+            if (com?.QualifierCodeId > 0)
             {
                 dataRows2?.Add(valueIndex.EntityId, valueIndex.AttributeId, valueIndex.Seq, com.QualifierCodeId);
             }
@@ -377,8 +377,9 @@ namespace ProtonConsole2.protonToSql
             }
         }
 
-        private static CompositeFloat GetCompositeSingle(ReadOnlyMemory<byte> data)
+        private static CompositeFloat? GetCompositeSingle(ReadOnlyMemory<byte> data)
         {
+            if (data.Length == 1 && data.Span[0] == 0) return null;
             CompositeFloat cf = new();
             if (data.Length > 8)
             {
@@ -394,11 +395,13 @@ namespace ProtonConsole2.protonToSql
                 }
             }
             cf.Number = ProtonDbFileReader.GetSingle(GetMemory(data, 4));
+           
             return cf;
         }
 
-        private static CompositeFloat GetCompositeDouble(ReadOnlyMemory<byte> data)
+        private static CompositeFloat? GetCompositeDouble(ReadOnlyMemory<byte> data)
         {
+            if (data.Length == 1 && data.Span[0] == 0) return null;
             CompositeFloat cf = new();
             if (data.Length > 12)
             {
@@ -412,7 +415,9 @@ namespace ProtonConsole2.protonToSql
                     }
                 }
             }
-            cf.Number = (float)ProtonDbFileReader.GetDouble(GetMemory(data, 8));
+          
+            cf.Number = (Single?)ProtonDbFileReader.GetDouble(GetMemory(data, 8));
+            
             return cf;
         }
 
@@ -596,7 +601,7 @@ namespace ProtonConsole2.protonToSql
 
         private class CompositeFloat
         {
-            public float? Number { get; set; }
+            public Single? Number { get; set; }
             public int QualifierCodeId { get; set; }
 
         }

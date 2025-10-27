@@ -11,7 +11,7 @@ public partial class View
     public short Id { get; set; }
 
     [Column(TypeName = "varchar(255)")]
-    public string Name { get; set; } 
+    public string Name { get; set; } = "";
 
     public short NRows { get; set; }
 

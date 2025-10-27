@@ -53,7 +53,7 @@ namespace ProtonConsole2.Utilities
         {
             var apsettings = ConfigurationManager.AppSettings;
             string capt;
-            Console.Clear();
+            //Console.Clear();
             Console.WriteLine("[1] SQL Db Server: " + apsettings.Server);
             Console.WriteLine("[2] DB name: " + apsettings.DBname);
             Console.WriteLine("[3] DB integrated security: " + apsettings.DBIsIntegrated.ToString());
@@ -73,102 +73,108 @@ namespace ProtonConsole2.Utilities
             }
             else capt = "Enter number 0-9;";
             Console.WriteLine("[0] Exit");
+            
             int? opt = null;
             while (opt != 0)
             {
                 opt = GetIntResponse(capt);
-                switch (opt)
-                {
-                    case 1:
-                        ConfigurationManager.SetDbServer();
-                        break;
-                    case 2:
-                        ConfigurationManager.SetDBname();
-                        break;
-                    case 3:
-                        ConfigurationManager.SetDbIntegretedSecurity();
-                        break;
-                    case 4:
-                        ConfigurationManager.SetDbPassword();
-                        break;
+                SwitchProcess(opt);
+            }
+        }
 
-                    case 5:
-                        ConfigurationManager.SetPathToProtonDbs();
-                        break;
+        public static void SwitchProcess(int? opt)
+        {
+            var appsettings = ConfigurationManager.AppSettings;
+            switch (opt)
+            {
+                case 1:
+                    ConfigurationManager.SetDbServer();
+                    break;
+                case 2:
+                    ConfigurationManager.SetDBname();
+                    break;
+                case 3:
+                    ConfigurationManager.SetDbIntegretedSecurity();
+                    break;
+                case 4:
+                    ConfigurationManager.SetDbPassword();
+                    break;
 
-                    case 6:
-                        ConfigurationManager.SetPathToLog();
-                        break;
+                case 5:
+                    ConfigurationManager.SetPathToProtonDbs();
+                    break;
 
-                    case 7:
-                        ConfigurationManager.SetExcludeItems();
-                        break;
+                case 6:
+                    ConfigurationManager.SetPathToLog();
+                    break;
 
-                    case 8:
-                        ConfigurationManager.SetOnlyTheseEntities();
-                        break;
+                case 7:
+                    ConfigurationManager.SetExcludeItems();
+                    break;
 
-
-                    case 9:
-                        ConfigurationManager.SetNoLoad();
-                        break;
-
-                    case 10:
-
-                        if (apsettings.IsValid())
-                        {
-                            Log.Logger = new LoggerConfiguration()
-                                .MinimumLevel.Debug()
-                                .WriteTo.Console()
-                                .WriteTo.File(ConfigurationManager.AppSettings.PathToLogs + "AppLog.txt", rollingInterval: RollingInterval.Day)
-                                .CreateLogger();
-
-                            MetadataLoader.LoadMetadata();
-                            EntityLoader.LoadLookups(1000);
-                            // ProtonToSql.SqlLoader.LoadIndexes();
-                        }
-                        break;
+                case 8:
+                    ConfigurationManager.SetOnlyTheseEntities();
+                    break;
 
 
-                    case 11:
-                        if (apsettings.IsValid())
-                        {
-                            //ProtonToSql.SqlLoader.LoadEntityInstances(200);
-                            Log.Logger = new LoggerConfiguration()
-                                .MinimumLevel.Debug()
-                                .WriteTo.Console()
-                                .WriteTo.File(ConfigurationManager.AppSettings.PathToLogs + "AppLog.txt", rollingInterval: RollingInterval.Day)
-                                .CreateLogger();
+                case 9:
+                    ConfigurationManager.SetNoLoad();
+                    break;
 
-                            using ValuesLoader dsl = new();
-                            dsl.LoadValues(1000);
-                            EntityLoader.LoadIndexes(1000);
-                            EntityLoader.LoadEntities(1000);
-                            EntityLoader.UpdateEntityNames();
-                        }
-                        break;
+                case 10:
 
-                    case 12:
-                        if (apsettings.IsValid())
-                        {
-                            //ProtonToSql.SqlLoader.LoadEntityInstances(200);
-                            Log.Logger = new LoggerConfiguration()
-                                .MinimumLevel.Debug()
-                                .WriteTo.Console()
-                                .WriteTo.File(ConfigurationManager.AppSettings.PathToLogs + "AppLog.txt", rollingInterval: RollingInterval.Day)
-                                .CreateLogger();
+                    if (appsettings.IsValid())
+                    {
+                        Log.Logger = new LoggerConfiguration()
+                            .MinimumLevel.Debug()
+                            .WriteTo.Console()
+                            .WriteTo.File(ConfigurationManager.AppSettings.PathToLogs + "AppLog.txt", rollingInterval: RollingInterval.Day)
+                            .CreateLogger();
 
-                            //using ValuesLoader dsl = new();
-                            //dsl.LoadValues(1000);
-                            EntityLoader.LoadIndexes(1000);
-                            EntityLoader.LoadEntities(1000);
-                            EntityLoader.UpdateEntityNames();
-                        }
-                        break;
+                        MetadataLoader.LoadMetadata();
+                        EntityLoader.LoadLookups(1000);
+                        // ProtonToSql.SqlLoader.LoadIndexes();
+                    }
+                    break;
 
-                    default:
-                        break;
-                }
+
+                case 11:
+                    if (appsettings.IsValid())
+                    {
+                        Log.Logger = new LoggerConfiguration()
+                            .MinimumLevel.Debug()
+                            .WriteTo.Console()
+                            .WriteTo.File(ConfigurationManager.AppSettings.PathToLogs + "AppLog.txt", rollingInterval: RollingInterval.Day)
+                            .CreateLogger();
+
+                        using ValuesLoader dsl = new();
+                        dsl.LoadValues(1000);
+                        EntityLoader.LoadIndexes(1000);
+                        EntityLoader.LoadEntities(1000);
+                        EntityLoader.UpdateEntityNames();
+                    }
+                    break;
+
+                case 12:
+                    if (appsettings.IsValid())
+                    {
+                        //ProtonToSql.SqlLoader.LoadEntityInstances(200);
+                        Log.Logger = new LoggerConfiguration()
+                            .MinimumLevel.Debug()
+                            .WriteTo.Console()
+                            .WriteTo.File(ConfigurationManager.AppSettings.PathToLogs + "AppLog.txt", rollingInterval: RollingInterval.Day)
+                            .CreateLogger();
+
+                        EntityLoader.LoadIndexes(1000);
+                        EntityLoader.LoadEntities(1000);
+                        EntityLoader.UpdateEntityNames();
+                    }
+                    break;
+                case 14:
+                    Console.WriteLine(ConfigurationManager.AppSettings.SQLConnectionString());
+                    break;
+                default:
+                    break;
             }
         }
     }

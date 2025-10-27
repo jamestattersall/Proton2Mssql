@@ -114,7 +114,7 @@ namespace ProtonConsole2.protonToSql
                 }
             }
             tableUtilities.BulkLoad();
-            if (exists) tableUtilities.SyncFromStaging();
+            tableUtilities.SyncFromStaging();
 
             prog.WriteProgressBar(1);
      
