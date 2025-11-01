@@ -42,7 +42,7 @@ namespace ProtonConsole2.protonToSql
             List<string> res = [];
             foreach (string val in nonKeyColumnNames)
             {
-                res.Add($"t.{val} <> s.{val}");
+                res.Add($"(ISNULL(t.{val},'') <> s.{val})");
             }
             return string.Join(" OR ", res);
         }

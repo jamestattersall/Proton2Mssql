@@ -210,7 +210,7 @@ namespace ProtonConsole2.Proton
             using Proton.Valid vald = new();
             for (short i = 1; i <= itm.NPages; i++)
             {
-                if (itm.MoveToPage(i) && itm.IsInstalled && itm.DataType > 0 && itm.EntityTypeId > 0)
+                if (itm.MoveToPage(i) && itm.DataType>0)
                 {
                     short tableId = (itm.GroupId == 0) ? (short)-itm.EntityTypeId : itm.GroupId;
 
@@ -231,23 +231,24 @@ namespace ProtonConsole2.Proton
                         case 3:
                         case 4:
                             attr.DataTypeId = (short)DataTypes.numeric;
+                            attr.Format = new string('#', itm.DisplayLength);
                             break;
                         case 5:
                         case 6:
-                            if (vald.MoveToPage(i) && (vald.QualifierCodeType > 0 || vald.ModifierCodeType > 0))
-                            {
-                                attr.DataTypeId = (short)DataTypes.QualifiedNumbers;
-                            }
-                            else attr.DataTypeId = (short)DataTypes.numeric;
+                            attr.DataTypeId = (short)DataTypes.numeric;
+                            attr.Format = (itm.SubType == 0) ? new string('#', itm.DisplayLength) : new string('#', itm.DisplayLength - itm.SubType - 1) + '.' + new string('0', itm.SubType);
                             break;
                         case 7:
                             attr.DataTypeId = (short)DataTypes.Lookup;
+                            attr.LookupTypeId = -1;
                             break;
                         case 8:
                             attr.DataTypeId = (short)DataTypes.Date;
+                            attr.Format = (attr.DisplayLength < 10) ? "dd.MM.yy" : "dd.MM.yyyy";
                             break;
                         case 9:
                             attr.DataTypeId = (short)DataTypes.Time;
+                            attr.Format = (attr.DisplayLength < 5) ? "hhmm" : "hh:mm";
                             break;
                         case 10:
                             attr.DataTypeId = (short)DataTypes.LongText;
@@ -263,17 +264,46 @@ namespace ProtonConsole2.Proton
                             throw new Exception("unknown datatype");
 
                     }
-                    if (itm.IsCalculated)
+                    if (vald.MoveToPage(i))
                     {
-
-                        if (vald.MoveToPage(i))
+                        if (itm.IsCalculated)
                         {
                             attr.Quark = vald.CalcQuark;
-                        }
+                        } 
+                        else
+                        {
+                            switch (itm.DataType)
+                            {
+                                case 2:
+                                case 3:
+                                case 4:
+                                    attr.Max = (float)vald.Max(itm.DataType, itm.SubType);
+                                    attr.Min = (float)vald.Min(itm.DataType, itm.SubType);
+                                    break;
+                                case 5:
+                                case 6:
+                                    if (vald.QualifierCodeType > 0 || vald.ModifierCodeType > 0)
+                                    {
+                                        attr.DataTypeId = (short)DataTypes.QualifiedNumbers;
+                                        attr.LookupTypeId = Math.Max(vald.QualifierCodeType, vald.ModifierCodeType);
+                                    }
+                                    attr.Max = (float)vald.Max(itm.DataType, itm.SubType);
+                                    attr.Min = (float)vald.Min(itm.DataType, itm.SubType);
+                                    break;
+                                case 7:
+                                    attr.Max = -(float)vald.Min(itm.DataType, itm.SubType);
+                                    attr.Min = -(float)vald.Max(itm.DataType, itm.SubType);
+                                    break;
 
+                                case 12:
+                                    attr.LookupTypeId = vald.CodeTypeId;
+                                    break;
+                                default:
+                                    break;
+                            }
+                        }
                     }
                     list.Add(attr);
-
                 }
             }
 
@@ -339,7 +369,7 @@ namespace ProtonConsole2.Proton
 
             using (Proton.CodeDef cd = new())
             {
-                codes.Add(new() { Id = 0, Name = "Proton DICT code" });
+                codes.Add(new() { Id = -1, Name = "Proton DICT code" });
                 for (short ix = 1; ix <= cd.NPages; ix++)
                 {
                     if (cd.MoveToPage(ix))
@@ -494,7 +524,7 @@ namespace ProtonConsole2.Proton
                     while (scrn.MoveToNextBlock() && ( scrn.X * scrn.Y) > 0)
                     {
                         short itemId = scrn.ItemId;
-                        if (itemId>0 && itm.MoveToPage(itemId) && itm.IsInstalled)
+                        if (itemId>0 && itm.MoveToPage(itemId) && itm.DataType>0)
                         {
                             list.Add(new()
                             {

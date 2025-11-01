@@ -65,7 +65,7 @@ namespace ProtonConsole2.Proton
 
         public string Name => GetString(0, 2) + "." + GetString(2, 4);
 
-        public short DataType => GetInt16(6);
+        public short DataType => GetUInt8(7);
 
         public bool IsIndexed => ExamineBit(Flag2Index, 1);
 
@@ -93,8 +93,6 @@ namespace ProtonConsole2.Proton
 
         public string Comment => GetString(20, 27);
 
-        public string floatFormat => SubType > 0 ? "#." + new string('#', SubType) : "#";
-
     }
 
     public class Valid() : ProtonDbFileReader("VALID.DBS")
@@ -103,7 +101,7 @@ namespace ProtonConsole2.Proton
         // VALID.DBS page numbers the same as ITEM.DBS
         // additional data for attribute, required only for input validation.
 
-        public double Max(short DataType, byte SubType)
+        public double Max(short DataType, short SubType)
         {
             switch (DataType)
             {
@@ -112,6 +110,7 @@ namespace ProtonConsole2.Proton
                 case 4: return SubType > 0 ? GetInt32(40) : GetUInt32(40);
                 case 5: return GetSingle(40);
                 case 6: return GetDouble(40);
+                case 7: return GetInt16(40);
             }
             return 0;
 
@@ -125,6 +124,7 @@ namespace ProtonConsole2.Proton
                 case 4: return SubType > 0 ? GetInt32(32) : GetUInt32(32);
                 case 5: return GetSingle(32);
                 case 6: return GetDouble(32);
+                case 7: return GetInt16(32);
             }
             return 0;
         }

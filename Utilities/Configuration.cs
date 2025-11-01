@@ -48,7 +48,11 @@ namespace ProtonConsole2.Utilities
                 if (asst != null ) {AppSettings = asst;}
                 if (!AppSettings.PathToProtonFolder.IsNullOrEmpty())
                 {
+                    if (File.Exists(Path.Combine(AppSettings.PathToProtonFolder, "BASE.dbs")))
+                    {
+
                     ProtonBase.SetProtonBase(AppSettings.PathToProtonFolder);
+                    }
                 }
 
             } else

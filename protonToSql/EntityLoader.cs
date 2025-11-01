@@ -35,7 +35,7 @@ namespace ProtonConsole2.protonToSql
             {
                 if (dict.MoveToPage(i))
                 {
-                    tableUtilities.DataRows.Add((-i), 0, dict.Name, "");
+                    tableUtilities.DataRows.Add((-i), -1, dict.Name, "");
                 
                     c++;
                     if (c > nRows)

@@ -21,11 +21,17 @@ public class Attribute
 
     public short? Quark { get; set; }
 
-    public short? DisplayLength { get; set; } 
+    public short? DisplayLength { get; set; }
+
+    public string? Format { get; set; }
+    public float? Max { get; set; }
+    public float? Min { get; set; }
+    public short? LookupTypeId { get; set; }
 
     public virtual  EntityType EntityType { get; set; }
 
     public virtual  DataType DataType { get; set; }
+
 }
 
 public enum DataTypes
