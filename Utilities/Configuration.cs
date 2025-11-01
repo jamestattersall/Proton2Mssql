@@ -198,7 +198,7 @@ namespace ProtonConsole2.Utilities
                         Log.Logger = new LoggerConfiguration()
                              .MinimumLevel.Debug()
                              .WriteTo.Console()
-                             .WriteTo.File(Path.Combine(ConfigurationManager.AppSettings.PathToLogs , "AppLog.txt"), rollingInterval: RollingInterval.Day)
+                             .WriteTo.File(Path.Combine(ConfigurationManager.AppSettings.PathToLogs ,"AppsLog.txt"), rollingInterval: RollingInterval.Day)
                              .CreateLogger();
 
                     }

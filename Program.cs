@@ -9,7 +9,7 @@ if (args.Length > 0)
     Log.Logger = new LoggerConfiguration()
         .MinimumLevel.Debug()
         .WriteTo.Console()
-        .WriteTo.File(ConfigurationManager.AppSettings.PathToLogs + "AppLog.txt", rollingInterval: RollingInterval.Day)
+        .WriteTo.File(Path.Combine(ConfigurationManager.AppSettings.PathToLogs ,"AppLog.txt"), rollingInterval: RollingInterval.Day)
         .CreateLogger();
 
     using ValuesLoader dsl = new();

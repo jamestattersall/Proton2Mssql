@@ -128,7 +128,7 @@ namespace ProtonConsole2.Utilities
                         Log.Logger = new LoggerConfiguration()
                             .MinimumLevel.Debug()
                             .WriteTo.Console()
-                            .WriteTo.File(ConfigurationManager.AppSettings.PathToLogs + "AppLog.txt", rollingInterval: RollingInterval.Day)
+                            .WriteTo.File(Path.Combine(ConfigurationManager.AppSettings.PathToLogs ,"AppLog.txt"), rollingInterval: RollingInterval.Day)
                             .CreateLogger();
 
                         MetadataLoader.LoadMetadata();
@@ -144,7 +144,7 @@ namespace ProtonConsole2.Utilities
                         Log.Logger = new LoggerConfiguration()
                             .MinimumLevel.Debug()
                             .WriteTo.Console()
-                            .WriteTo.File(ConfigurationManager.AppSettings.PathToLogs + "AppLog.txt", rollingInterval: RollingInterval.Day)
+                            .WriteTo.File(Path.Combine(ConfigurationManager.AppSettings.PathToLogs , "AppLog.txt"), rollingInterval: RollingInterval.Day)
                             .CreateLogger();
 
                         using ValuesLoader dsl = new();
@@ -162,7 +162,7 @@ namespace ProtonConsole2.Utilities
                         Log.Logger = new LoggerConfiguration()
                             .MinimumLevel.Debug()
                             .WriteTo.Console()
-                            .WriteTo.File(ConfigurationManager.AppSettings.PathToLogs + "AppLog.txt", rollingInterval: RollingInterval.Day)
+                            .WriteTo.File(Path.Combine(ConfigurationManager.AppSettings.PathToLogs , "AppLog.txt"), rollingInterval: RollingInterval.Day)
                             .CreateLogger();
 
                         EntityLoader.LoadIndexes(1000);
