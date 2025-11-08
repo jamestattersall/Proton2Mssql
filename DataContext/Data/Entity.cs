@@ -17,6 +17,6 @@ public partial class Entity
 
     public DateTime LastUpdated { get; set; }
 
-    public virtual EntityType EntityType { get; set; }
+    public virtual EntityType? EntityType { get; set; }
 
 }

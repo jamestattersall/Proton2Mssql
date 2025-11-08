@@ -17,7 +17,10 @@ public class Attribute
     public short? TableId { get; set; }
 
     [Column(TypeName = "varchar(255)")]
-    public string Name { get; set; } 
+    public string Name { get; set; }
+
+    [Column(TypeName = "varchar(255)")]
+    public string Comment { get; set; }
 
     public short? Quark { get; set; }
 

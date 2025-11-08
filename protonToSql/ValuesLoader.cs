@@ -8,6 +8,7 @@ using ProtonConsole2.ProtonToSql;
 using Serilog;
 using System;
 using System.Data;
+using System.Data.Common;
 using System.Diagnostics;
 
 namespace ProtonConsole2.protonToSql
@@ -35,7 +36,9 @@ namespace ProtonConsole2.protonToSql
         public long NEntities { get; private set; }
         public long NDataPages { get; private set; }
         public int DataPageCount => data.PageCounter;
-
+        public int EntitiesLoaded { get; private set; } = 0;
+        public int EntitiesUpdated { get; private set; } = 0;
+        public int EntitiesSkipped { get; private set; } = 0;
 
         public ValuesLoader()
         {
@@ -52,8 +55,6 @@ namespace ProtonConsole2.protonToSql
             for (int i = 1; i <=item.NPages; i++)
             {
                 if (item.MoveToPage(i) &&
-                    item.IsInstalled &&
-                    !item.IsCalculated &&
                     item.DataType > 0 &&
                     !Utilities.ConfigurationManager.AppSettings.ExcludeItems.Contains(i)
                     )
@@ -151,11 +152,11 @@ namespace ProtonConsole2.protonToSql
         }
 
 
-        public bool LoadDataRows(int entityId, DateTime? ifUpdatedSince = null)
+        public bool LoadDataRows(int entityId, DateTime? lastUpdated = null)
         {
             if (vrx.MoveToPage(entityId) &&
                 patsts.MoveToPage(entityId) &&
-                (ifUpdatedSince == null || ifUpdatedSince < patsts.Updated))
+                (lastUpdated == null ||  patsts.Updated > lastUpdated))
             {
                 ValueIndex valueIndex = new() { EntityId = entityId };
 
@@ -196,9 +197,17 @@ namespace ProtonConsole2.protonToSql
                         }
                         blockIsValid = data.MoveToNextBlock();
                     }
+                    if(lastUpdated == null)
+                    {
+                        EntitiesLoaded++;
+                    } else
+                    {
+                        EntitiesUpdated++;
+                    }
                     return true;
                 }
             }
+            EntitiesSkipped++;
             return false;
         }
 
@@ -438,7 +447,9 @@ namespace ProtonConsole2.protonToSql
         public void LoadValues(int nRows)
         {
             var st = Stopwatch.StartNew();
-
+            EntitiesSkipped = 0;
+            EntitiesLoaded = 0;
+            EntitiesUpdated = 0;
             foreach (IValueTableUtilities u in tableUtilities)
             {
                 u.SwitchTables();
@@ -453,7 +464,7 @@ namespace ProtonConsole2.protonToSql
             {
               latest=ctx.Entities.Max(e => e.LastUpdated);
             }
-                         
+            
             ctx.Database.ExecuteSql($"EXEC sp_msforeachtable 'ALTER TABLE ? NOCHECK CONSTRAINT ALL'");
 
             using SqlBulkCopy bkc = new(Utilities.ConfigurationManager.AppSettings.SQLConnectionString(),
@@ -524,12 +535,21 @@ namespace ProtonConsole2.protonToSql
             Task.WaitAll(tasks);
 
             prog.WriteProgressBar(1);
+            Console.WriteLine();
             st.Stop();
-            string str;
-            if (Utilities.ConfigurationManager.AppSettings.NoLoad) str = "scanned";
-            else str = "loaded";
-            Log.Information($"{nUpdated} entities {str} in {st.Elapsed:hh\\:mm\\:ss}");
+            if (Utilities.ConfigurationManager.AppSettings.NoLoad)
+            {
+                Console.WriteLine($"{nUpdated} entities scanned in {st.Elapsed:hh\\:mm\\:ss}");
+            }
+            else
+            {
+                Log.Information($"{EntitiesLoaded} New entities loaded");
+                Log.Information($"{EntitiesUpdated} Entities updated");
+                Log.Information($"{EntitiesSkipped} Entities skipped (already up to date)");
+                Log.Information($"in {st.Elapsed:hh\\:mm\\:ss}");
 
+            }
+           
             void Noload(int i)
             {
                 counter++;
@@ -603,7 +623,6 @@ namespace ProtonConsole2.protonToSql
         {
             public Single? Number { get; set; }
             public int QualifierCodeId { get; set; }
-
         }
         public void Dispose()
         {

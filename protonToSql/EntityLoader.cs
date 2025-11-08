@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using ProtonConsole2.DataContext;
 using ProtonConsole2.Proton;
+using Serilog;
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -117,7 +118,13 @@ namespace ProtonConsole2.protonToSql
             tableUtilities.SyncFromStaging();
 
             prog.WriteProgressBar(1);
-     
+            Console.WriteLine();
+            if (ctx.Entities.Any())
+            {
+                var updated = ctx.Entities.Max(e => e.LastUpdated);
+                Log.Information($"Entities updated to {updated}");
+            }
+
         }
 
 

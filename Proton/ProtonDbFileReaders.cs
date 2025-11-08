@@ -1,5 +1,4 @@
-﻿
-using Serilog;
+﻿using Serilog;
 using System.Runtime.CompilerServices;
 
 using System.Text;
@@ -143,14 +142,6 @@ namespace ProtonConsole2.Proton
     {
         //Proton UI menus
 
-        public override bool MoveToNextBlock()
-        {
-            if (base.MoveToNextBlock())
-            {
-                return PageMemory.Span[Ptr] != 0x0;
-            }
-            return false;
-        }
 
         public string Name => GetString(0, 20);
 
@@ -340,17 +331,6 @@ namespace ProtonConsole2.Proton
         public byte X => GetUInt8( (Ptr + 3));
         public byte Y => GetUInt8( (Ptr + 5));
 
-        public override bool MoveToNextBlock()
-        {
-            if (base.MoveToNextBlock())
-            {
-                return PageMemory.Span[Ptr + 1] > 0;
-            }
-            else
-            {
-                return false;
-            }
-        }
     }
 
     public class ScrTxt() : ProtonDbFileReaderExt("SCRTXT.DBS", 0, 0)
@@ -425,17 +405,7 @@ namespace ProtonConsole2.Proton
 
         public short ItemId => GetInt16(Ptr);
 
-        public override bool MoveToNextBlock()
-        {
-            if (base.MoveToNextBlock())
-            {
-                return ItemId > 0;
-            }
-            else
-            {
-                return false;
-            }
-        }
+        
     }
 
     public class Patsts() : ProtonDbFileReader("PATSTS.DBS")

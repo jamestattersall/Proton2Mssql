@@ -29,7 +29,7 @@ public partial class Proton2Context : DbContext
 
     public virtual DbSet<DataType> DataTypes { get; set; }
 
-    public virtual DbSet<Entity> Entities { get; set; }
+    public virtual DbSet<DataContext.Entity> Entities { get; set; }
 
     public virtual DbSet<EntityType> EntityTypes { get; set; }
 
