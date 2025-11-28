@@ -102,7 +102,7 @@ An 80 x 1 character banner across the top of the Proton screen. The ID line iden
 
 ## Entity
 
-The Proton entity is similar to a class in modern programming terminology. There is always an entity for the patient. Additional entities could be staff member, Hospital location, dialyser, equipment, General Practitioner. Each entity defines a template for data structure The Proton database would store multiple instances of one or more entities. A patient called John Smith would be stored in Proton as an instance to the patient entity.
+The Proton entity is similar to a class in modern programming terminology. There is always an entity for the patient. Additional entities are created as required and could be staff member, Hospital location, dialyser, equipment, General Practitioner. Each entity defines a template for data structure The Proton database would store multiple instances of one or more entities. A patient called John Smith would be stored in Proton as an instance to the patient entity.
 
 Each entity has a single specified item as a unique indexed free-text identifier (e.g. hospital number). This identifier is used as a primary ID for the patient for external purposes. This is unfortunate because it can be changed by a user. The genuine primary key, used by proton for internal purposes, the entity instance ID would be a better choice as the entity key. The entity instance ID can be accessed by a Proton quark us the “patient” system variable. An entity can be selected in Proton as # followed by the entity instance ID.
 
@@ -110,13 +110,11 @@ This identifier can be stored in a record of another entity instance as an entit
 
 Entities can be linked together (e.g. a patient's GP) by storing the entity key for one entity instance (e.g. a specific GP) in the record of another entity instance (e.g. a specific patient).
 
-An entity is one of the core EAV concepts.
-
 An entity also has a default ID line.
 
 ## Item
 
-The Proton Item is the Attribute in EAV terminology. The item is roughly equivalent to a field in the logical schema. The item defines the meaning of any values describing an entity instance. In Proton systems there are typically about 2000 items. For the patient entity, there may be items last name, first name, surname, date of birth etc.
+The Proton Item is the Attribute in EAV terminology. The item is roughly equivalent to a field/column of a table in a relational database. The item defines the meaning of any values describing an entity instance. In Proton systems there are typically about 2000 items. For the patient entity, there may be items last name, first name, surname, date of birth etc.
 
 The item describes the data type (test, integer, code etc.) display length, the entity it describes and its (optional) membership of a group.
 
@@ -128,7 +126,7 @@ The screen consists of a number of fixed captions and place-holders for stored d
 
 ## Data type
 
-Each attribute/item These include unsigned or signed integers in 8,16 or 32 bit lengths, Fixed and variable-length free text stored as 8-bit ASCII to maximum of 128 characters, IEEE floating point numbers in 32 and 64 bit lengths, coded lists stored as 16 and 32-bit unsigned integer Ids, entity keys stored as variable-length strings of 8-bit ASCII characters to maximum length of 128 characters and long text (memo) stored as 8-bit ASCII which cannot be indexed but can be any length.
+Each attribute/item has a DataTypeId as a byte 1-12. This identifys the data type for the item. These include unsigned or signed integers in 8,16 or 32 bit lengths, Fixed and variable-length free text stored as 8-bit ASCII to maximum of 128 characters, IEEE floating point numbers in 32 and 64 bit lengths, coded lists stored as 16 and 32-bit unsigned integer Ids, entity keys stored as variable-length strings of 8-bit ASCII characters to maximum length of 128 characters and long text (memo) stored as 8-bit ASCII which cannot be indexed but can be any length.
 
 ## Static data
 
@@ -180,7 +178,7 @@ New/READ codes are stored as 32-bit integers, evaluating to the page/record ID i
 
 The 5-character code index allows hierarchical browsing of the code records, appropriate for the hierarchical structure of READ V2 and ICD10. In these code systems, the hierarchy is explicitly hard-coded in the code (e.g. code A2e.. is a child of A2...). The hierarchical browsing of codes in Proton will not work for the current version of READ (V3) or SNOMED CT, where the hierarchy is defined in a separate database. SNOMED CT codes are longer than 5 characters so cannot be used in Proton (unless the code is embedded in the Code text).
 
-The code type allows codes to be grouped independently of the code record/page ID. So the codes no not need to be grouped in contiguous pages in READ.DBS.
+The code type allows codes to be grouped independently of the code record/page ID. So the codes do not need to be grouped in contiguous pages in READ.DBS.
 
 # Proton data types
 
