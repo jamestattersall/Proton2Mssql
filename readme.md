@@ -25,21 +25,20 @@ The metadata consists of information to define the tables, views, menues etc.
 For more information on the EAV format, see the following article: https://pmc.ncbi.nlm.nih.gov/articles/PMC2110957/
 
 The structure of the data in Proton is similar to the EAV format with it's relations/tables broadly conforming to the EAV tables as follows:
-**Proton .dbs files		EAV SQL tables**
-Patsts.dbs              Entity
-Entity.dbs              EntityTypes (classes))
-Item.dbs                Attributes
-code.dbs, dict.dbs      Lookups
-codedef.dbs             LookupTypes
-						DataTypes
-Data.dbs			    Values (datatype-specific) (EntityId INT, AttributeId INT, Seq INT, + datatype-specific value field)
-							ValueNumbers (float)
-							ValueTexts (VARCHAR(255))
-							ValueDates (date)
-							ValueTimes (time)
-							ValueLookups (int)
-							ValueEntities (int)
-frtext.dbs 					ValueLongTexts (VARCHAR(MAX))
+|Proton .dbs files		|EAV SQL tables                                                                                      |
+|-----------------------|----------------------------------------------------------------------------------------------------|
+|Entity.dbs             |EntityTypes (classes))                                                                              |
+|Item.dbs               |Attributes                                                                                          |
+|code.dbs, dict.dbs     |Lookups                                                                                             |
+|codedef.dbs            |LookupTypes                                                                                         |
+|						|DataTypes                                                                                           |
+|Data.dbs			    |Values (datatype-specific) (EntityId INT, AttributeId INT, Seq INT, + datatype-specific value field)|
+|						|	ValueNumbers (float)                                                                             |
+|						|	ValueTexts (VARCHAR(255))                                                                        |
+|						|	ValueTimes (time)                                                                                |
+|						|	ValueLookups (int)                                                                               |
+|						|	ValueEntities (int)                                                                              |
+|frtext.dbs 			|	ValueLongTexts (VARCHAR(MAX))                                                                    |
 
 The value tables have a compound primary key (EntityId INT, AttributeId INT, Seq INT).
 Seq (sequence) is the 1-based ordinal row number.These non-EAV-standard keys are retained for compatibility with the Proton data structure.
