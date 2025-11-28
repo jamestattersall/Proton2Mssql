@@ -8,22 +8,59 @@ These files should be copied onto a Windows server, accessible to this app or on
 The files include base.dbs, entity.dbs, data.dbs, item.dbs. dict.dbs, code.dbs, screen.dbs, scrtext.dbs, index.dbs, indexdef.dbs, trgroup.dbs.
 
 The app presents a console with options to set the settings required to create the SQL connection string and the path to the Proton .dbs files.
-The settings are stored in an encypted on the local mcine.
+The settings are stored in the application root/appsettings.json. Integrated security is used for SQL connection to avoid storing passwords in the app. 
 
 When the settings have been entered, the option load/update metadata creates the SQL database and populates the SQL tables with the metadata required to interpret the proton data. This metadata includes screen layouts, field names, captions, menu structures, encrypted passwords etc.
 
-When the metadata has been loaded, the option to load/import data will copy all of the data held on Proton into the SQL tabloes. This data included, free text, associated entities (e.g. GPs, staff, dialysers, locations etc) as well as all patient data.
+When the metadata has been loaded, the option to load/import data will copy all of the data held on Proton into the SQL tabloes. This data includes, free text, associated entities (e.g. GPs, staff, dialysers, locations etc) as well as all patient data.
 
 # SQL data structure
 
-The data is held in Entity, Attribute, Value (EAV) format. The attributes are the Proton Items, defining the fields (name, data type, display format etc.). The entities are the individual patients, staff, locations, GPs etc. When the data is displayed in a 2-dimensional grid, the attrubute names are the column headers and the values are the contents of the grid cells. The rows of the grid could be dates for time-related data (e.g. a table if laboratory results for a selected patient) or could represent individial entities (e.g. patient identifiers in a report listing information on a range of patients).
+The data copied into SQL is held in Entity, Attribute, Value (EAV) format. The attributes are the Proton Items, defining the fields (name, data type, display format etc.). The entities are the individual patients, staff, locations, GPs etc. When the data is displayed in a 2-dimensional grid, the attrubute names are the column headers and the values are the contents of the grid cells. The rows of the grid could be dates for time-related data (e.g. a table if laboratory results for a selected patient) or could represent individial entities (e.g. patient identifiers in a report listing information on a range of patients).
 
 The individual values are stored in datatype-specific value tables (ValueNumbers, ValueTexts, ValueDates etc.). The value tables have indexed id fields (entityId, attributeId, Seq) and the data type-specific value field. The Seq field is the 1-based row ordinal for time-related data. This is required to complete the unique primary key for the value table and to maintain the correct order of rows as in the Proton database.
 
 The metadata consists of information to define the tables, views, menues etc.
 
+For more information on the EAV format, see the following article: https://pmc.ncbi.nlm.nih.gov/articles/PMC2110957/
 
-# Introduction to proton database file structure
+The structure of the data in Proton is similar to the EAV format with it's relations/tables broadly conforming to the EAV tables as follows:
+**Proton .dbs files		EAV SQL tables**
+Patsts.dbs              Entity
+Entity.dbs              EntityTypes (classes))
+Item.dbs                Attributes
+code.dbs, dict.dbs      Lookups
+codedef.dbs             LookupTypes
+						DataTypes
+Data.dbs			    Values (datatype-specific) (EntityId INT, AttributeId INT, Seq INT, + datatype-specific value field)
+							ValueNumbers (float)
+							ValueTexts (VARCHAR(255))
+							ValueDates (date)
+							ValueTimes (time)
+							ValueLookups (int)
+							ValueEntities (int)
+frtext.dbs 					ValueLongTexts (VARCHAR(MAX))
+
+The value tables have a compound primary key (EntityId INT, AttributeId INT, Seq INT).
+Seq (sequence) is the 1-based ordinal row number.These non-EAV-standard keys are retained for compatibility with the Proton data structure.
+
+**concepts specific for proton and retained for compatibility **
+Screen.dbs				Views, ViewAttributes
+scrtext.dbs				ViewCaptions
+Menu.dbs                Menus, MenuItems
+trgroup.dbs             Tables, TableAttributes
+passwd.dbs              UserStarters
+
+In order to facilitate querying the EAV database the following table-valued functions are provided:
+GetViewValues(@entityId INT, @viewId INT @page)
+GetTableValues(@entityId INT, @tableId, @page)
+To return data in spreadsheet format, the following sps are provided:
+TableValuesCrosstab(@entityId INT, @tableId INT, @startRow INT, @rows INT)
+ViewValuesCrosstab(@entityId INT, @tableId INT, @startRow INT, @rows INT)
+
+
+
+# Proton database file structure
 
 The Proton database uses an EAV structure (Entity Attribute Values) so patient data is stored in a few ‘value tables’ (data.dbs, frtext.dbs). Supporting 'metadata tables' are required to define how the stored binary data is interpreted, accessed and displayed on screen (item.dbs, screen.dbs, trgroup.dbs menu.dbs etc.). The technical advantage of the EAV structure is that few 'tables' are required and healthcare data (which requires a large number of sparsely-populated fields) is stored efficiently. From the user's point of view, the EAV structure works well because it is easy to add and edit fields, entities, views etc. to accommodate changing clinical practice.
 
@@ -49,7 +86,7 @@ The physical structure of the proton database (organisation of data within datab
 
 You can inspect (and edit) the live Proton database files using the data editor built in to Proton. Editing the live data files is almost certain to damage the system. It is easier and safer to use a free binary/hex text editor such as HxD on read-only copies of the live Proton databases.
 
-<http://mh-nexus.de/en/>
+<http://mh-nexus.de/en/> 
 
 If you use HxD, open a copy of base.dbs as read-only, then set the View/bytes per row to 64, then View/offset base decimal.
 

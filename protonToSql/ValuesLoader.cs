@@ -42,9 +42,16 @@ namespace ProtonConsole2.protonToSql
 
         public ValuesLoader()
         {
-            var tableCount = Enum.GetNames<ValueTable>().Length;
-            tableUtilities = new IValueTableUtilities[tableCount];
-            GetTableUtils();
+            tableUtilities = new IValueTableUtilities[Enum.GetNames<ValueTable>().Length];
+
+            tableUtilities[(int)ValueTable.ValueTexts] = new ValueTableUtilities<ValueText>();
+            tableUtilities[(int)ValueTable.ValueLongTexts] = new ValueTableUtilities<ValueLongText>();
+            tableUtilities[(int)ValueTable.ValueNumbers] = new ValueTableUtilities<ValueNumber>();
+            tableUtilities[(int)ValueTable.ValueDates] = new ValueTableUtilities<ValueDate>();
+            tableUtilities[(int)ValueTable.ValueTimes] = new ValueTableUtilities<ValueTime>();
+            tableUtilities[(int)ValueTable.ValueLookups] = new ValueTableUtilities<ValueLookup>();
+            tableUtilities[(int)ValueTable.ValueEntities] = new ValueTableUtilities<ValueEntity>();
+
 
             NEntities = vrx.NPages;
             NDataPages = data.NPages;
@@ -105,19 +112,6 @@ namespace ProtonConsole2.protonToSql
                 }
             }
 
-        }
-
-        private void GetTableUtils()
-        {
-            tableUtilities = new IValueTableUtilities[Enum.GetNames<ValueTable>().Length];
-
-            tableUtilities[(int)ValueTable.ValueTexts] =  new ValueTableUtilities<ValueText>();
-            tableUtilities[(int)ValueTable.ValueLongTexts] = new ValueTableUtilities<ValueLongText>();
-            tableUtilities[(int)ValueTable.ValueNumbers] = new ValueTableUtilities<ValueNumber>();
-            tableUtilities[(int)ValueTable.ValueDates] = new ValueTableUtilities<ValueDate>();
-            tableUtilities[(int)ValueTable.ValueTimes] = new ValueTableUtilities<ValueTime>();
-            tableUtilities[(int)ValueTable.ValueLookups] = new ValueTableUtilities<ValueLookup>();
-            tableUtilities[(int)ValueTable.ValueEntities] = new ValueTableUtilities<ValueEntity>();
         }
 
 
@@ -543,8 +537,7 @@ namespace ProtonConsole2.protonToSql
             }
             else
             {
-                Log.Information($"{EntitiesLoaded} New entities loaded");
-                Log.Information($"{EntitiesUpdated} Entities updated");
+                Log.Information($"{EntitiesUpdated} Entities updated or loaded");
                 Log.Information($"{EntitiesSkipped} Entities skipped (already up to date)");
                 Log.Information($"in {st.Elapsed:hh\\:mm\\:ss}");
 

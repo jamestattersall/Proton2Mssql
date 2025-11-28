@@ -80,7 +80,8 @@ namespace ProtonConsole2.protonToSql
             using Proton.Patsts patsts = new();
             using Proton.Vrx vrx = new();
             using Proton2Context ctx = new();
-            bool exists = ctx.Entities.Any();
+            int nEntities = ctx.Entities.Count();
+            bool exists = nEntities > 0;
            
 
             int c = 0;
@@ -122,6 +123,7 @@ namespace ProtonConsole2.protonToSql
             if (ctx.Entities.Any())
             {
                 var updated = ctx.Entities.Max(e => e.LastUpdated);
+                Log.Information($"{ctx.Entities.Count() - nEntities} new entities loaded");
                 Log.Information($"Entities updated to {updated}");
             }
 
