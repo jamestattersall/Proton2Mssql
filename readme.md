@@ -18,7 +18,7 @@ When the metadata has been loaded, the option to load/import data will copy all 
 
 The data copied into SQL is held in Entity, Attribute, Value (EAV) format. The attributes are the Proton Items, defining the fields (name, data type, display format etc.). The entities are the individual patients, staff, locations, GPs etc. When the data is displayed in a 2-dimensional grid, the attrubute names are the column headers and the values are the contents of the grid cells. The rows of the grid could be dates for time-related data (e.g. a table if laboratory results for a selected patient) or could represent individial entities (e.g. patient identifiers in a report listing information on a range of patients).
 
-The individual values are stored in datatype-specific value tables (ValueNumbers, ValueTexts, ValueDates etc.). The value tables have indexed id fields (entityId, attributeId, Seq) and the data type-specific value field. The Seq field is the 1-based row ordinal for time-related data. This is required to complete the unique primary key for the value table and to maintain the correct order of rows as in the Proton database.
+The individual values are stored in datatype-specific value tables (ValueNumbers, ValueTexts, ValueDates etc.).
 
 The metadata consists of information to define the tables, views, menues etc.
 
@@ -29,27 +29,29 @@ The structure of the data in Proton is similar to the EAV format with it's relat
 |-----------------------|----------------------------------------------------------------------------------------------------|
 |Entity.dbs             |EntityTypes (classes))                                                                              |
 |Item.dbs               |Attributes                                                                                          |
-|code.dbs, dict.dbs     |Lookups                                                                                             |
+|codes.dbs, dict.dbs    |Lookups                                                                                             |
 |codedef.dbs            |LookupTypes                                                                                         |
 |						|DataTypes                                                                                           |
 |Data.dbs			    |Values (datatype-specific) (EntityId INT, AttributeId INT, Seq INT, + datatype-specific value field)|
-|						|	ValueNumbers (float)                                                                             |
-|						|	ValueTexts (VARCHAR(255))                                                                        |
-|						|	ValueTimes (time)                                                                                |
-|						|	ValueLookups (int)                                                                               |
-|						|	ValueEntities (int)                                                                              |
-|frtext.dbs 			|	ValueLongTexts (VARCHAR(MAX))                                                                    |
+|						|-ValueNumbers (float)                                                                             |
+|						|-ValueTexts (VARCHAR(255))                                                                        |
+|						|-ValueTimes (time)                                                                                |
+|						|-ValueLookups (int)                                                                               |
+|						|-ValueEntities (int)                                                                              |
+|frtext.dbs 			|-ValueLongTexts (VARCHAR(MAX))                                                                    |
 
 The value tables have a compound primary key (EntityId INT, AttributeId INT, Seq INT).
 Seq (sequence) is the 1-based ordinal row number.These non-EAV-standard keys are retained for compatibility with the Proton data structure.
 
 **concepts specific for proton and retained for compatibility**
-|Proton .dbs files		|EAV SQL tables         |
-|-----------------------|-----------------------|
-|scrtext.dbs			|ViewCaptions|
-|Menu.dbs               |Menus, MenuItems|
-|trgroup.dbs            |Tables, TableAttributes|
-|passwd.dbs             |UserStarters|
+|Proton .dbs files		    |EAV SQL tables         |
+|---------------------------|-----------------------|
+|scrtext.dbs			    |ViewCaptions|
+|Menu.dbs                   |Menus, MenuItems|
+|trgroup.dbs                |Tables, TableAttributes|
+|passwd.dbs                 |UserStarters|
+|Index.dbs                  |Indexes|
+|IndexDef.dbs, Keydef.dbs   |IndexTypes|
 
 In order to facilitate querying the EAV database the following table-valued functions are provided:
 GetViewValues(@entityId INT, @viewId INT @page)
@@ -353,8 +355,7 @@ Pitfalls:
 
 1. Exclude terminating empty bytes &00.
 2. Replace the &00 characters inside text with &0A (line break).
-3. Count the lines. If less than the UINT8 in Byte 7 (total number of lines) then append enough extra line breaks so that you have the correct number of lines.
-4. The text will be formatted for a limited hardware VDU and may have too many line breaks for a modern display.
+3. The text will be formatted for a limited hardware VDU 80 characters wide. In a modern display the lines will appear strangely short.
 
 Bytes 0-3: UINT32: Number of the next page in chain
 
