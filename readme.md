@@ -43,12 +43,13 @@ The structure of the data in Proton is similar to the EAV format with it's relat
 The value tables have a compound primary key (EntityId INT, AttributeId INT, Seq INT).
 Seq (sequence) is the 1-based ordinal row number.These non-EAV-standard keys are retained for compatibility with the Proton data structure.
 
-**concepts specific for proton and retained for compatibility **
-Screen.dbs				Views, ViewAttributes
-scrtext.dbs				ViewCaptions
-Menu.dbs                Menus, MenuItems
-trgroup.dbs             Tables, TableAttributes
-passwd.dbs              UserStarters
+**concepts specific for proton and retained for compatibility**
+|Proton .dbs files		|EAV SQL tables         |
+|-----------------------|-----------------------|
+|scrtext.dbs			|ViewCaptions|
+|Menu.dbs               |Menus, MenuItems|
+|trgroup.dbs            |Tables, TableAttributes|
+|passwd.dbs             |UserStarters|
 
 In order to facilitate querying the EAV database the following table-valued functions are provided:
 GetViewValues(@entityId INT, @viewId INT @page)
