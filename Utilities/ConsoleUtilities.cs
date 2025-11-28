@@ -9,6 +9,8 @@ namespace ProtonConsole2.Utilities
         const string _twirl = "-\\|/";
 
         private int _nSteps ;
+
+        private int step = 0;
   
         private string? _backSpaces;
 
@@ -46,17 +48,21 @@ namespace ProtonConsole2.Utilities
 
         public void WriteProgressBar(float fraction)
         {
-            Console.Write(_backSpaces);
-            Console.Write("[");
-            var p = fraction * NSteps ;
-            for (var i = 0; i <= NSteps; ++i)
+            if((int)(fraction*1000) > step)
             {
-                if (i > p)
-                    Console.Write(' ');
-                else
-                    Console.Write(_block);
+                step = (int)(fraction*1000);
+                Console.Write(_backSpaces);
+                Console.Write("[");
+                var p = fraction * NSteps ;
+                for (var i = 0; i <= NSteps; ++i)
+                {
+                    if (i > p)
+                        Console.Write(' ');
+                    else
+                        Console.Write(_block);
+                }
+                Console.Write("] " + string.Format("{0,6:###.0%}",fraction));
             }
-            Console.Write("] " + string.Format("{0,6:###.0%}",fraction));
         }
 
 

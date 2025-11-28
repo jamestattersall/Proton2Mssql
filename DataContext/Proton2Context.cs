@@ -1,9 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Data;
-using EFCore.BulkExtensions.SqlAdapters;
+﻿using System.Data;
 using Microsoft.EntityFrameworkCore;
 using ProtonConsole2.DataContext.ProtonUi;
+using Serilog;
 
 namespace ProtonConsole2.DataContext;
 
@@ -11,8 +9,14 @@ public partial class Proton2Context : DbContext
 {
     public Proton2Context() 
     {
-       Database.EnsureCreated();
-
+        try
+        {
+            Database.EnsureCreated();
+        }
+        catch {
+            Log.Warning("Unable to connect to database");
+        
+        }
     }
 
     public Proton2Context(DbContextOptions<Proton2Context> options)
@@ -25,7 +29,7 @@ public partial class Proton2Context : DbContext
 
     public virtual DbSet<DataType> DataTypes { get; set; }
 
-    public virtual DbSet<Entity> Entities { get; set; }
+    public virtual DbSet<DataContext.Entity> Entities { get; set; }
 
     public virtual DbSet<EntityType> EntityTypes { get; set; }
 
@@ -92,6 +96,7 @@ public partial class Proton2Context : DbContext
 
         OnModelCreatingPartial(modelBuilder);
     }
+
 
     partial void OnModelCreatingPartial(ModelBuilder modelBuilder);
 }

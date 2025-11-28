@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using ProtonConsole2.Proton;
+using Serilog;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,7 +17,7 @@ namespace ProtonConsole2.Utilities
     {
         static ConfigurationManager()
         {
-            path = Directory.GetCurrentDirectory() + "\\appsettings.json";
+            path = Path.Combine(Path.Combine(Directory.GetCurrentDirectory(), "appsettings.json"));
             AppSettings = new();
             LoadSettings();
         }
@@ -47,7 +48,11 @@ namespace ProtonConsole2.Utilities
                 if (asst != null ) {AppSettings = asst;}
                 if (!AppSettings.PathToProtonFolder.IsNullOrEmpty())
                 {
+                    if (File.Exists(Path.Combine(AppSettings.PathToProtonFolder, "BASE.dbs")))
+                    {
+
                     ProtonBase.SetProtonBase(AppSettings.PathToProtonFolder);
+                    }
                 }
 
             } else
@@ -81,7 +86,7 @@ namespace ProtonConsole2.Utilities
                 } else
                 {
                     var toExit = Questioner.GetBoolResponse("Continue without saving?", false);
-                    if (toExit != null || toExit == true)
+                    if (toExit)
                     {
                         trycount = 10;
                     }
@@ -99,7 +104,7 @@ namespace ProtonConsole2.Utilities
                 if (path.IsNullOrEmpty())
                 {
                     var toExit = Questioner.GetBoolResponse("Continue without saving?", false);
-                    if (toExit != null || toExit == true)
+                    if (toExit)
                     {
                         trycount = 10;
                     }
@@ -107,10 +112,8 @@ namespace ProtonConsole2.Utilities
                 {
                     if (System.IO.Directory.Exists(path))
                     {
-                        if (path.Contains("/") && !path.EndsWith("/")) path += "/";
-                        if (path.Contains(@"\") && !path.EndsWith(@"\")) path += @"\";
                         var filename = "BASE.DBS";
-                        if (System.IO.File.Exists(path + filename))
+                        if (System.IO.File.Exists(Path.Combine(path , filename)))
                         {
                             AppSettings.PathToProtonFolder = path!;
                             SaveSettings();
@@ -118,6 +121,86 @@ namespace ProtonConsole2.Utilities
                             ProtonBase.SetProtonBase(AppSettings.PathToProtonFolder);
 
                         } else Console.WriteLine("Directory does not contain base.dbs file.");
+                    }
+                    else
+                    {
+                        Console.WriteLine("Directory not found");
+                    }
+                }
+                trycount++;
+            }
+            Questioner.EditSettings();
+        }
+
+        public static void SetExcludeItems()
+        {
+            string? res = Questioner.GetStringResponse("Enter items to ignore: ", string.Join(',', AppSettings.ExcludeItems.ConvertAll(o => o.ToString()).ToArray()));
+
+            if (res != null) {
+                AppSettings.ExcludeItems.Clear();
+
+                var arry=res.Split(',').ToList();
+                foreach (string item in arry)
+                {
+                    int i;
+                    if(int.TryParse(item, out i))
+                    {
+                        AppSettings.ExcludeItems.Add(i);
+                    }
+                }
+                SaveSettings();
+            }
+            Questioner.EditSettings();
+        }
+
+        public static void SetOnlyTheseEntities()
+        {
+            string? res = Questioner.GetStringResponse("Enter ientities to load: ", string.Join(',', AppSettings.OnlyTheseEntities.ConvertAll(o => o.ToString()).ToArray()));
+
+            if (res != null)
+            {
+                AppSettings.OnlyTheseEntities.Clear();
+
+                var arry = res.Split(',').ToList();
+                foreach (string item in arry)
+                {
+                    int i;
+                    if (int.TryParse(item, out i))
+                    {
+                        AppSettings.OnlyTheseEntities.Add(i);
+                    }
+                }
+                SaveSettings();
+            }
+            Questioner.EditSettings();
+        }
+        public static void SetPathToLog()
+        {
+            int trycount = 0; ;
+            while (trycount < 4)
+            {
+                string? path = Questioner.GetStringResponse("Enter directory to store log files: ", AppSettings.PathToLogs);
+                if (path.IsNullOrEmpty())
+                {
+                    var toExit = Questioner.GetBoolResponse("Continue without saving?", false);
+                    if (toExit)
+                    {
+                        trycount = 10;
+                    }
+                }
+                else
+                {
+                    if (System.IO.Directory.Exists(path))
+                    {
+                        AppSettings.PathToLogs = path!;
+                        SaveSettings();
+                        trycount = 10;
+                        Log.Logger = new LoggerConfiguration()
+                             .MinimumLevel.Debug()
+                             .WriteTo.Console()
+                             .WriteTo.File(Path.Combine(ConfigurationManager.AppSettings.PathToLogs ,"AppsLog.txt"), rollingInterval: RollingInterval.Day)
+                             .CreateLogger();
+
                     }
                     else
                     {
@@ -206,6 +289,32 @@ namespace ProtonConsole2.Utilities
 
             Questioner.EditSettings();
         }
+
+        public static void SetNoLoad()
+        {
+            int trycount = 0;
+            while (trycount < 4)
+            {
+                bool? igp = Questioner.GetBoolResponse("Scan only, no load", AppSettings.NoLoad);
+                if (igp != null)
+                {
+                    AppSettings.NoLoad = (bool)igp!;
+                    SaveSettings();
+                    trycount = 10;
+                }
+                else
+                {
+                    var toExit = Questioner.GetBoolResponse("Continue without saving?", false);
+                    if (toExit != null || toExit == true)
+                    {
+                        trycount = 10;
+                    }
+                }
+                trycount++;
+            }
+
+            Questioner.EditSettings();
+        }
     }
 
     public class AppSettings
@@ -217,7 +326,12 @@ namespace ProtonConsole2.Utilities
         public  string DBPassword { get; set; } = string.Empty;
         public  bool DBIsIntegrated { get; set; } = false;
         public string PathToProtonFolder { get; set; } = string.Empty;
+        public string PathToLogs { get; set; } = string.Empty;
+        public List<int> ExcludeItems { get; set; } = [];
+        public List<int> OnlyTheseEntities { get; set; } = [];
+        public bool NoLoad { get; set; } = false;
         public  DateTime LastUpdate { get; set; } = DateTime.MinValue;
+
 
         public string SQLConnectionString(bool isDefault = false)
         {
@@ -236,29 +350,33 @@ namespace ProtonConsole2.Utilities
 
         public bool TestConnection(bool defaultDb=false)
         {
-            using (SqlConnection connection = new SqlConnection(SQLConnectionString(defaultDb)))
+            using SqlConnection connection = new SqlConnection(SQLConnectionString(defaultDb));
+            
+            try
             {
-                try
-                {
-                    connection.Open();
-                    connection.Close();
-                    return true;
-                }
-                catch (SqlException ex)
-                {
-                    Console.WriteLine("unable to connect to server using:" + ConfigurationManager.AppSettings.SQLConnectionString(true) + " " + ex.Message);
-                    return false;
-                }
+                connection.Open();
+                connection.Close();
+                return true;
             }
+            catch (SqlException ex)
+            {
+                Console.WriteLine("unable to connect to server using:" + ConfigurationManager.AppSettings.SQLConnectionString(true) + " " + ex.Message);
+                return false;
+            }
+            
         }
         public bool TestPathToProton()
         {
-            return (File.Exists(PathToProtonFolder + "BASE.dbs"));
+            return (File.Exists(Path.Combine(PathToProtonFolder , "BASE.dbs")));
+        }
+        public bool TestPathToLogs()
+        {
+            return (Path.Exists(PathToLogs ));
         }
 
         public bool IsValid()
         {
-            return TestPathToProton() && TestConnection(true);
+            return TestPathToProton() && TestPathToLogs() && TestConnection(true);
         }
     }
 }

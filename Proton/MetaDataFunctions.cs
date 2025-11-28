@@ -1,20 +1,10 @@
-﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Query.Internal;
-using Microsoft.EntityFrameworkCore.Storage;
-using Microsoft.Identity.Client;
-using Microsoft.IdentityModel.Tokens;
-using NetTopologySuite.Index.HPRtree;
+﻿
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
+using Microsoft.Extensions.Primitives;
 using ProtonConsole2.DataContext;
 using ProtonConsole2.DataContext.ProtonUi;
-using ProtonConsole2.Proton;
-using ProtonConsole2.ProtonToSql;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
-using System.Runtime.CompilerServices;
-using System.Threading.Tasks.Dataflow;
-using System.Transactions;
-using System.Xml;
+using System.Text;
+using System.Text.Encodings.Web;
 
 namespace ProtonConsole2.Proton
 {
@@ -124,6 +114,38 @@ namespace ProtonConsole2.Proton
             return list;
         }
 
+
+        public static List<IndexType> GetIndexTypes()
+        {
+            List<IndexType> list = [];
+            using Proton.IndexDef indexDef = new();
+            using Proton.KeyDef keyDef = new();
+            {
+                for (short i = 1; i <= indexDef.NPages; i++)
+                {
+                    if (indexDef.MoveToPage(i))
+                    {
+                        for (short k= 1; k<=indexDef.NPages; k++)
+                        {
+                            if(keyDef.MoveToPage(k) && keyDef.IndexDefId == i)
+                            {
+                                list.Add(new()
+                                {
+                                    Id = i,
+                                    Name = keyDef.Name,
+                                    EntityTypeId = keyDef.EntityTypeId,
+                                    IdLineViewId = indexDef.IdlineScreenId,
+                                    Prefix = keyDef.Prefix
+                                });
+                                break; // only one key per index type
+                            }
+                        }
+                    }
+                }
+            }
+            return list;
+        }
+
         public static List<DataContext.Table> GetTables()
         {
             Dictionary<short, DataContext.Table> list = [];
@@ -137,7 +159,7 @@ namespace ProtonConsole2.Proton
                 {
                     short tableId = (itm.GroupId == 0) ? (short)-itm.EntityTypeId : itm.GroupId;
 
-                    Table? tbl = list.GetValueOrDefault(tableId);
+                    DataContext.Table? tbl = list.GetValueOrDefault(tableId);
                     if (tbl == null)
                     {
                         tbl = new()
@@ -189,17 +211,18 @@ namespace ProtonConsole2.Proton
             using Proton.Valid vald = new();
             for (short i = 1; i <= itm.NPages; i++)
             {
-                if (itm.MoveToPage(i) && itm.IsInstalled && itm.DataType > 0 && itm.EntityTypeId > 0)
+                if (itm.MoveToPage(i) && itm.DataType>0)
                 {
                     short tableId = (itm.GroupId == 0) ? (short)-itm.EntityTypeId : itm.GroupId;
 
                     DataContext.Attribute attr = new()
                     {
-                        Id = (short)itm.ItemId,
+                        Id = i,
                         EntityTypeId = itm.EntityTypeId,
                         TableId = tableId,
                         DisplayLength = itm.DisplayLength,
-                        Name = itm.Name.Length > itm.Comment.Length ? itm.Name : itm.Comment
+                        Name = itm.Name,
+                        Comment = itm.Comment
                     };
                     switch (itm.DataType)
                     {
@@ -213,20 +236,19 @@ namespace ProtonConsole2.Proton
                             break;
                         case 5:
                         case 6:
-                            if (vald.MoveToPage(i) && (vald.QualifierCodeType > 0 || vald.ModifierCodeType > 0))
-                            {
-                                attr.DataTypeId = (short)DataTypes.QualifiedNumbers;
-                            }
-                            else attr.DataTypeId = (short)DataTypes.numeric;
+                            attr.DataTypeId = (short)DataTypes.numeric;
                             break;
                         case 7:
                             attr.DataTypeId = (short)DataTypes.Lookup;
+                            attr.LookupTypeId = -1;
                             break;
                         case 8:
                             attr.DataTypeId = (short)DataTypes.Date;
+                            attr.Format = (attr.DisplayLength < 10) ? "dd.MM.yy" : "dd.MM.yyyy";
                             break;
                         case 9:
                             attr.DataTypeId = (short)DataTypes.Time;
+                            attr.Format = (attr.DisplayLength < 5) ? "hhmm" : "hh:mm";
                             break;
                         case 10:
                             attr.DataTypeId = (short)DataTypes.LongText;
@@ -242,17 +264,46 @@ namespace ProtonConsole2.Proton
                             throw new Exception("unknown datatype");
 
                     }
-                    if (itm.IsCalculated)
+                    if (vald.MoveToPage(i))
                     {
-
-                        if (vald.MoveToPage(i))
+                        if (itm.IsCalculated)
                         {
                             attr.Quark = vald.CalcQuark;
-                        }
+                        } 
+                        else
+                        {
+                            switch (itm.DataType)
+                            {
+                                case 2:
+                                case 3:
+                                case 4:
+                                    attr.Max = (float)vald.Max(itm.DataType, itm.SubType);
+                                    attr.Min = (float)vald.Min(itm.DataType, itm.SubType);
+                                    break;
+                                case 5:
+                                case 6:
+                                    if (vald.QualifierCodeType > 0 || vald.ModifierCodeType > 0)
+                                    {
+                                        attr.DataTypeId = (short)DataTypes.QualifiedNumbers;
+                                        attr.LookupTypeId = Math.Max(vald.QualifierCodeType, vald.ModifierCodeType);
+                                    }
+                                    attr.Max = (float)vald.Max(itm.DataType, itm.SubType);
+                                    attr.Min = (float)vald.Min(itm.DataType, itm.SubType);
+                                    break;
+                                case 7:
+                                    attr.Max = -(float)vald.Min(itm.DataType, itm.SubType);
+                                    attr.Min = -(float)vald.Max(itm.DataType, itm.SubType);
+                                    break;
 
+                                case 12:
+                                    attr.LookupTypeId = vald.CodeTypeId;
+                                    break;
+                                default:
+                                    break;
+                            }
+                        }
                     }
                     list.Add(attr);
-
                 }
             }
 
@@ -289,30 +340,29 @@ namespace ProtonConsole2.Proton
                     byte c = 0;
                     while (menu.MoveToNextBlock())
                     {
-                        list.Add(new()
+                        if (menu.ItemName.Length > 0)
                         {
-                            MenuId = i,
-                            Seq = c,
-                            Name = menu.ItemName,
-                            Function = menu.Function,
-                            NextMenuId = menu.NextMenuId,
-                            StartMenuId = menu.StartMenuId,
-                            Parameter1 = menu.Parameter1,
-                            Parameter2 = menu.Parameter2,
-                            Parameter3 = menu.Parameter3,
-                            Parameter4 = menu.Parameter4
-                        });
-
-                        c++;
+                            list.Add(new()
+                            {
+                                MenuId = i,
+                                Seq = c,
+                                Name = menu.ItemName,
+                                Function = menu.Function,
+                                NextMenuId = menu.NextMenuId,
+                                StartMenuId = menu.StartMenuId,
+                                Parameter1 = menu.Parameter1,
+                                Parameter2 = menu.Parameter2,
+                                Parameter3 = menu.Parameter3,
+                                Parameter4 = menu.Parameter4
+                            });
+                        }
+                        c++; 
                     }
                 }
             }
 
             return list;
-
         }
-
-
 
         public static List<LookupType> GetLookupTypes()
         {
@@ -320,22 +370,19 @@ namespace ProtonConsole2.Proton
 
             using (Proton.CodeDef cd = new())
             {
-                codes.Add(new() { Id = 0, Name = "Proton DICT code" });
+                codes.Add(new() { Id = -1, Name = "Proton DICT code" });
                 for (short ix = 1; ix <= cd.NPages; ix++)
                 {
                     if (cd.MoveToPage(ix))
                     {
-                        var ct = cd.CodeDefId;
+                        var ct = ix;
                         if (ct > 0)
                         {
                             codes.Add(new() { Id = ix, Name = cd.Name });
                         }
                     }
                 }
-
             }
-
-
             return codes;
         }
 
@@ -351,10 +398,7 @@ namespace ProtonConsole2.Proton
                 {
                     if (rcode.MoveToPage(ix))
                     {
-                        var ct = rcode.CodeTypeID;
-
-                        codes.Add(new() { Id = ix, Name = rcode.Name, LookupTypeId = rcode.CodeTypeID, Code = rcode.ReadCode });
-
+                      codes.Add(new() { Id = ix, Name = rcode.Name, LookupTypeId = rcode.CodeTypeID, Code = rcode.ReadCode });
                     }
                 }
             }
@@ -373,139 +417,114 @@ namespace ProtonConsole2.Proton
         }
 
 
-        public static List<View> GetViews()
+        public static List<DataContext.View> GetViews()
         {
-            List<View> list = [];
+            List<DataContext.View> list = [];
 
             using (Proton.Screen scrn = new())
             using (Proton.ScrTxt scrtxt = new())
             using (Proton.Item itm = new())
-            using (Proton.Menu menu = new())
             using (Proton.TrGroup grp = new())
 
-                for (short ix = 1; ix <= scrn.NPages; ix++)
+            for (short ix = 1; ix <= scrn.NPages; ix++)
+            {
+                if (scrn.MoveToPage(ix))
                 {
-                    if (scrn.MoveToPage(ix) && itm.MoveToPage(scrn.ItemId))
+                    var scrObj = new DataContext.View()
                     {
-                        var scrObj = new View()
-                        {
-                            Id = ix,
-                            Name = scrn.Name,
-                            TableId = itm.GroupId == 0 ? (short)-itm.EntityTypeId : itm.GroupId,
-                            EntityTypeId = itm.EntityTypeId,
-                            NRows = scrn.RowCount,
-                            NItems = scrn.ItemCount
-                        };
+                        Id = ix,
+                        NRows = scrn.RowCount,
+                        NItems = scrn.ItemCount
+                    };
 
-                        if (scrn.MoveToPage(itm.GroupId))
+                    if (grp.MoveToPage(ix) && itm.MoveToPage(grp.DateItemId))
+                    {
+                        scrObj.TableId = itm.GroupId == 0 ? (short)-itm.EntityTypeId : itm.GroupId;
+                        scrObj.EntityTypeId = itm.EntityTypeId;
+                    }
+                    else
+                    {
+                        while (scrn.MoveToNextBlock())
                         {
-                            if (scrn.Name.Length > scrObj.Name.Length)
+                            if (itm.MoveToPage(scrn.ItemId))
                             {
-                                scrObj.Name = scrn.Name;
-                            }
-                            scrn.MoveToPage(ix);
-                        }
-                        if (grp.MoveToPage(itm.GroupId))
-                        {
-                            if (grp.Name.Length > scrObj.Name.Length)
-                            {
-                                scrObj.Name = grp.Name;
+                                scrObj.TableId = itm.GroupId == 0 ? (short)-itm.EntityTypeId : itm.GroupId;
+                                scrObj.EntityTypeId = itm.EntityTypeId;
+                                break;
                             }
                         }
-                        bool breakLoop = false;
-                        for (short ixm = 1; ixm <= menu.NPages; ixm++)
-                        {
-                            if (menu.MoveToPage(ixm))
-                            {
-                                while (menu.MoveToNextBlock())
-                                {
-                                    if (menu.Function == "SCRN" && menu.Parameter1 == ix)
-                                    {
-                                        if (scrObj.Name.Length > menu.ItemName.Length)
-                                        {
-                                            scrObj.Name = menu.ItemName;
-                                            breakLoop = true;
-                                            break;
-                                        }
-                                    }
-                                }
-                                if (breakLoop) break;
-                            }
-                        }
-
-
-                        short seq = 0;
+                    }
+         
+                    if (scrObj.TableId != 0 && scrObj.EntityTypeId != 0)
+                    {
 
                         if (scrtxt.MoveToPage(ix))
                         {
-                            seq = 0;
-                            string nm = scrtxt.Text.Replace("date of", "", StringComparison.CurrentCultureIgnoreCase).Replace("date at", "", StringComparison.OrdinalIgnoreCase).Replace("date", "", StringComparison.OrdinalIgnoreCase).Trim();
-                            if (nm.Length > scrObj.Name.Length)
+                            var sb = new StringBuilder();
+                            SortedList<int,string> capts = [];
+                            byte miny = 255;
+                            while (scrtxt.MoveToNextBlock())
                             {
-                                scrObj.Name = nm;
+                                //get Y value to top row
+                                if (scrtxt.Y>0 && scrtxt.Y < miny) miny = scrtxt.Y;
                             }
-  
+                            scrtxt.MoveToFirstBlock();
+                            while (scrtxt.MoveToNextBlock())
+                            {
+                                if (scrtxt.Y==miny && !scrtxt.Text.StartsWith('['))
+                                {
+                                    capts.Add(scrtxt.X, scrtxt.Text);
+                                }
+                            }
+                            foreach(var cap in capts.OrderBy(c=> c.Key))
+                            {
+                                sb.Append(cap.Value + " ");
+                            }
+
+                            scrObj.Name = sb.ToString().Trim();
                         }
+
                         list.Add(scrObj);
                     }
                 }
+            }
 
             return list;
-
-
         }
 
-        class ViewAttributeEquality : EqualityComparer<ViewAttribute>
-        {
-            public override bool Equals(ViewAttribute? b1, ViewAttribute? b2)
-            {
-                if (b1 == null && b2 == null)
-                    return true;
-                else if (b1 == null || b2 == null)
-                    return false;
-
-                return (b1.ViewId == b2.ViewId &&
-                        b1.Seq == b2.Seq) ;
-            }
-
-            public override int GetHashCode(ViewAttribute bx)
-            {
-                int hCode = bx.ViewId ^ bx.Seq;
-                return hCode.GetHashCode();
-            }
-        }
 
         public static List<ViewAttribute> GetViewAttributes()
         {
             List<ViewAttribute> list = [];
 
             using (Proton.Screen scrn = new())
-            using (Proton.Item itm = new())
 
             for (short ix = 1; ix <= scrn.NPages; ix++)
             {
                 if (scrn.MoveToPage(ix) )
                 {
                     short seq = 0;
-                    while (scrn.MoveToNextBlock() && ( scrn.X * scrn.Y) > 0)
+                    while(scrn.MoveToNextBlock())
                     {
-                        short itemId = scrn.ItemId;
-                        if (itemId>0 && itm.MoveToPage(itemId) && itm.IsInstalled)
+                        var va = new ViewAttribute()
                         {
-                            list.Add(new()
-                            {
-                                ViewId = ix,
-                                AttributeId = itemId,
-                                Seq = seq,
-                                X = scrn.X,
-                                Y = scrn.Y
-                            });
+                            ViewId = ix,
+                            AttributeId = scrn.ItemId,
+                            Seq = seq,
+                            X = scrn.X,
+                            Y = scrn.Y
+                        };
+
+                        if (va.AttributeId > 0 && va.X > 0 && va.Y > 0
+                                && !list.Any(v => v.AttributeId == va.AttributeId && v.ViewId == ix)) 
+                        {
+                            list.Add(va);
                             seq++;
                         }
                     }
                 }
             }
-            return list.Distinct(new ViewAttributeEquality() ).ToList();
+            return list;
         }
 
         public static List<ViewCaption> GetViewCaptions()
@@ -518,17 +537,21 @@ namespace ProtonConsole2.Proton
                 {
                     short seq = 0;
          
-                    while (scrtxt.MoveToNextBlock() && (scrtxt.Text.Length * scrtxt.X * scrtxt.Y) > 0)
+                    while (scrtxt.MoveToNextBlock() )
                     {
-                        list.Add(new()
+                        var vc=new ViewCaption()                      
                         {
                             ViewId = ix,
                             Seq = seq,
                             Caption = scrtxt.Text,
                             X = scrtxt.X,
                             Y = scrtxt.Y
-                        });
-                        seq++;
+                        };
+                        if (vc.Caption.Length > 0 && vc.X > 0 && vc.Y > 0)
+                        {
+                            list.Add(vc);
+                            seq++;
+                        }
                     }
                 }
             }
@@ -536,6 +559,4 @@ namespace ProtonConsole2.Proton
         }
 
     }
-
-
 }

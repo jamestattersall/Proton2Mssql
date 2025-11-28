@@ -20,4 +20,6 @@ public partial class ViewCaption
 
     public byte Y { get; init; } 
 
+    public virtual View View { get; set; }
+
 }

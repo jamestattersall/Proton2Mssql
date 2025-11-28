@@ -1,40 +1,24 @@
-﻿// See https://aka.ms/new-console-template for more information
-using EFCore.BulkExtensions;
-using ProtonConsole2.DataContext;
-using ProtonConsole2.Proton;
-using ProtonConsole2.ProtonToSql;
+﻿
+using ProtonConsole2.protonToSql;
 using ProtonConsole2.Utilities;
-using System.Text.Json;
+using Serilog;
 
+if (args.Length > 0)
+{
+    Console.WriteLine(args[0]);
+    Log.Logger = new LoggerConfiguration()
+        .MinimumLevel.Debug()
+        .WriteTo.Console()
+        .WriteTo.File(Path.Combine(ConfigurationManager.AppSettings.PathToLogs ,"AppLog.txt"), rollingInterval: RollingInterval.Day)
+        .CreateLogger();
 
-Questioner.EditSettings();
-return;
-
-//code below for debugging;
-
-var ctx = new Proton2Context();
-var ited = MetaDataFunctions.GetViews();
-var options = new JsonSerializerOptions { WriteIndented = true, NumberHandling = System.Text.Json.Serialization.JsonNumberHandling.AllowNamedFloatingPointLiterals };
-var bulkConfig2 = new BulkConfig { SqlBulkCopyOptions = SqlBulkCopyOptions.KeepIdentity, IncludeGraph = true };
-
-ctx.BulkInsertOrUpdate(ited, bulkConfig2);
-
-Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(ited, options));
-return;
-
-
-
-//SqlLoader.LoadMetadata();
-//SqlLoader.LoadEntityInstances(300);
-
-SqlLoader.LoadMetadata();
-
-
-var ite = MetaDataFunctions.GetTables();
-//ctx.BulkInsertOrUpdateOrDelete(ite);
-
-
-Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(ite, options));
+    using ValuesLoader dsl = new();
+    dsl.LoadValues(1000);
+    EntityLoader.LoadIndexes(1000);
+    EntityLoader.LoadEntities(1000);
+    EntityLoader.UpdateEntityNames();
+}
+else Questioner.EditSettings();
 return;
 
 

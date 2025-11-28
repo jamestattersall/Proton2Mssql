@@ -17,11 +17,23 @@ public class Attribute
     public short? TableId { get; set; }
 
     [Column(TypeName = "varchar(255)")]
-    public string Name { get; set; } 
+    public string Name { get; set; }
+
+    [Column(TypeName = "varchar(255)")]
+    public string Comment { get; set; }
 
     public short? Quark { get; set; }
 
-    public short? DisplayLength { get; set; } 
+    public short? DisplayLength { get; set; }
+
+    public string? Format { get; set; }
+    public float? Max { get; set; }
+    public float? Min { get; set; }
+    public short? LookupTypeId { get; set; }
+
+    public virtual  EntityType EntityType { get; set; }
+
+    public virtual  DataType DataType { get; set; }
 
 }
 
