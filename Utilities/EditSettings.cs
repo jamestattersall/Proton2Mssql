@@ -60,18 +60,26 @@ namespace ProtonConsole2.Utilities
             Console.WriteLine("[4] DB Password: ");
             Console.WriteLine("[5] Proton.dbs files directory: " + apsettings.PathToProtonFolder);
             Console.WriteLine("[6] Log files directory: " + apsettings.PathToLogs);
-            Console.WriteLine("[7] Items to exclude: " + string.Join(',',apsettings.ExcludeItems.ConvertAll(o => o.ToString()).ToArray()));
-            Console.WriteLine("[8] Only these entities: " + string.Join(',', apsettings.OnlyTheseEntities.ConvertAll(o => o.ToString()).ToArray()));
-            Console.WriteLine("[9] Scan for errors, no import: " + apsettings.NoLoad.ToString());
-
-            if (apsettings.IsValid())
+            Console.WriteLine("[7] Items to exclude (leave blank to include all): " + string.Join(',',apsettings.ExcludeItems.ConvertAll(o => o.ToString()).ToArray()));
+            Console.WriteLine("[8] Only these entities (leave blank for all): " + string.Join(',', apsettings.OnlyTheseEntities.ConvertAll(o => o.ToString()).ToArray()));
+            
+            if (apsettings.TestPathToProton())
             {
-                using Proton2Context ctx = new();
-                Console.WriteLine("[10] Load/update metadata...");
-                Console.WriteLine("[11] Load/update entity data...");
-                capt = "Enter number 0-11;";
+                Console.WriteLine("[9] Scan for errors, no import: " + apsettings.NoLoad.ToString());
+
+                if (apsettings.IsValid())
+                {
+                    using Proton2Context ctx = new();
+                    Console.WriteLine("[10] Load/update metadata...");
+                    Console.WriteLine("[11] Load/update entity data...");
+                    capt = "Enter number 0-11;";
+                }
+                else
+                {
+                    capt = "Enter number 0-9;";
+                }
             }
-            else capt = "Enter number 0-9;";
+            else capt = "Enter number 0-8;";
             Console.WriteLine("[0] Exit");
             
             int? opt = null;
