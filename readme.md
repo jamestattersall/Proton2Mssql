@@ -4,7 +4,7 @@
 The app should be installed on a windows PC or server with access to MS SQL. 
 
 The proton database consists of several files all with the file extension .dbs and located in the same directory on the Proton unix server.
-These files should be copied onto a Windows server, accessible to this app or onto the same achine as the app..
+These files should be copied onto a Windows server, accessible to this app or onto the same machine as the app..
 The files include base.dbs, entity.dbs, data.dbs, item.dbs. dict.dbs, code.dbs, screen.dbs, scrtext.dbs, index.dbs, indexdef.dbs, trgroup.dbs.
 
 The app presents a console with options to set the settings required to create the SQL connection string and the path to the Proton .dbs files.
@@ -18,7 +18,7 @@ When the metadata has been loaded, the option to load/import data will copy all 
 
 The data copied into SQL is held in Entity, Attribute, Value (EAV) format. The attributes are the Proton Items, defining the fields (name, data type, display format etc.). The entities are the individual patients, staff, locations, GPs etc. When the data is displayed in a 2-dimensional grid, the attrubute names are the column headers and the values are the contents of the grid cells. The rows of the grid could be dates for time-related data (e.g. a table if laboratory results for a selected patient) or could represent individial entities (e.g. patient identifiers in a report listing information on a range of patients).
 
-The individual values are stored in datatype-specific value tables (ValueNumbers, ValueTexts, ValueDates etc.). The value tables have indexed id fields (entityId, attributeId, Seq) and the data type-specific value field. The Seq field is the 1-based row ordinal for time-related data. This is required to complete the unique primary key for the value table and to maintain the correct order of rows as in the Proton database.
+The individual values are stored in datatype-specific value tables (ValueNumbers, ValueTexts, ValueDates etc.).
 
 The metadata consists of information to define the tables, views, menues etc.
 
@@ -27,29 +27,34 @@ For more information on the EAV format, see the following article: https://pmc.n
 The structure of the data in Proton is similar to the EAV format with it's relations/tables broadly conforming to the EAV tables as follows:
 |Proton .dbs files		|EAV SQL tables                                                                                      |
 |-----------------------|----------------------------------------------------------------------------------------------------|
-|Entity.dbs             |EntityTypes (classes))                                                                              |
-|Item.dbs               |Attributes                                                                                          |
-|code.dbs, dict.dbs     |Lookups                                                                                             |
+|patsts.dbs             |Entities                                                                                            |
+|entity.dbs             |EntityTypes                                                                                            |
+|Item.dbs, valid.dbs    |Attributes                                                                                          |
+|codes.dbs, dict.dbs    |Lookups                                                                                             |
 |codedef.dbs            |LookupTypes                                                                                         |
-|						|DataTypes                                                                                           |
-|Data.dbs			    |Values (datatype-specific) (EntityId INT, AttributeId INT, Seq INT, + datatype-specific value field)|
-|						|	ValueNumbers (float)                                                                             |
-|						|	ValueTexts (VARCHAR(255))                                                                        |
-|						|	ValueTimes (time)                                                                                |
-|						|	ValueLookups (int)                                                                               |
-|						|	ValueEntities (int)                                                                              |
-|frtext.dbs 			|	ValueLongTexts (VARCHAR(MAX))                                                                    |
+|(implied)				|DataTypes                                                                                           |
+|Data.dbs			    |Values (datatype-specific) (EntityId INT, AttributeId SMALLINT, Seq INT, + datatype-specific value field)|
+|						|-ValueNumbers (float)                                                                             |
+|						|-ValueTexts (VARCHAR(255))                                                                        |
+|						|-ValueTimes (time)                                                                                |
+|						|-ValueLookups (int)                                                                               |
+|						|-ValueEntities (int)                                                                              |
+|frtext.dbs 			|-ValueLongTexts (VARCHAR(MAX))                                                                    |
 
 The value tables have a compound primary key (EntityId INT, AttributeId INT, Seq INT).
 Seq (sequence) is the 1-based ordinal row number.These non-EAV-standard keys are retained for compatibility with the Proton data structure.
+Ideally, the primary key should be (EntityId BIGINT, AttributeId SMALLINT) only, and table rows would be entities with attributes ParentEntityId (e.g. patient instance), EntityTypeId (e.g. Blood chemistry), Date and Seq but this would complicate population from the source data in Proton..
 
 **concepts specific for proton and retained for compatibility**
-|Proton .dbs files		|EAV SQL tables         |
-|-----------------------|-----------------------|
-|scrtext.dbs			|ViewCaptions|
-|Menu.dbs               |Menus, MenuItems|
-|trgroup.dbs            |Tables, TableAttributes|
-|passwd.dbs             |UserStarters|
+|Proton .dbs files		    |EAV SQL tables         |
+|---------------------------|-----------------------|
+|screen.dbs			        |Views, ViewAttributes|
+|scrtext.dbs			    |ViewCaptions|
+|Menu.dbs                   |Menus, MenuItems|
+|trgroup.dbs                |Tables, TableAttributes|
+|passwd.dbs                 |UserStarters|
+|Index.dbs                  |Indexes|
+|IndexDef.dbs, Keydef.dbs   |IndexTypes|
 
 In order to facilitate querying the EAV database the following table-valued functions are provided:
 GetViewValues(@entityId INT, @viewId INT @page)
@@ -62,7 +67,7 @@ ViewValuesCrosstab(@entityId INT, @tableId INT, @startRow INT, @rows INT)
 
 # Proton database file structure
 
-The Proton database uses an EAV structure (Entity Attribute Values) so patient data is stored in a few ‘value tables’ (data.dbs, frtext.dbs). Supporting 'metadata tables' are required to define how the stored binary data is interpreted, accessed and displayed on screen (item.dbs, screen.dbs, trgroup.dbs menu.dbs etc.). The technical advantage of the EAV structure is that few 'tables' are required and healthcare data (which requires a large number of sparsely-populated fields) is stored efficiently. From the user's point of view, the EAV structure works well because it is easy to add and edit fields, entities, views etc. to accommodate changing clinical practice.
+The Proton database schema is largely compatible with the EAV format (Entity Attribute Values). Patient data is stored in just two ‘value tables’ (data.dbs, frtext.dbs). Supporting 'metadata tables' are required to define how the stored binary data is interpreted, accessed and displayed on screen (item.dbs, screen.dbs, trgroup.dbs menu.dbs etc.). The technical advantage of the EAV structure is that few 'tables' are required and healthcare data (which requires a large number of sparsely-populated fields) is stored efficiently. From the user's point of view, the EAV structure works well because it is easy to add and edit fields, entities, views etc. to accommodate changing clinical practice.
 
 Proton was developed in the 1970s when hardware was extremely limited and a database could hold only one table. To meet the requirements for multiple tables, proton accesses multiple databases, each held in a separate file with the .dbs extension, located in the dbs directory.
 
@@ -80,9 +85,9 @@ An array of values may be stored as a series of grouped bytes known as data bloc
 
 To make things a bit more difficult, some databases contain series of data blocks of variable length. In this case, the block length is either stored as one of the values in the block or there is a delimiter at the block boundary. In either case, individual blocks can only be accessed by iterating block by block from the start of the series. Each block must be evaluated in turn (at least finding the delimiter or block length value). Proton stores data in the order in which is required to display on screen so this is not a severe limitation.
 
-Where a series of data blocks may overflow a page, they are stored in a chain of as many pages as required. In this case, the first few bytes on the page (the header) are pointers to the next (and sometimes previous) pages in the chain. These page pointers are integers evaluating to a page/record ID. Pages in a chain are not stored sequentially but are linked by the next page pointer.
+Where a series of data blocks may overflow a page, they are stored in a chain of as many pages as required. In this case, the first few bytes on the page (the header) are pointers to the next (and sometimes previous) page in the chain. These page pointers are integers evaluating to a page/record ID. Pages in a chain are not stored sequentially but are linked by the next page pointer.
 
-The physical structure of the proton database (organisation of data within databases, their pages, page chains, page offsets etc.) must be known in order to find and evaluate any stored value. In a modern database, this organisation can be deduced by inspecting the database physical schema (tables, fields, relationships, indexes etc.), which generally gas a graphical interface. In Proton, some of this can be deduced by inspecting the Proton metadata (e.g. base.dbs), but much of this organisation is hard-coded within the Proton application and undocumented. Proton includes binary/hex editors which allows a user to inspect the raw data in the proton databases. By comparing the raw data in the .dbs files with values presented by the Proton application, it is possible for a user to deduce the physical structure and schema of Proton. This document describes the results of this work.
+The physical structure of the proton database (organisation of data within databases, their pages, page chains, page offsets etc.) must be known in order to find and evaluate any stored value. In a modern database, this organisation can be deduced by inspecting the database physical schema (tables, fields, relationships, indexes etc.), which generally has a graphical interface. In Proton, some of this can be deduced by inspecting the Proton metadata (e.g. base.dbs), but much of this organisation is hard-coded within the Proton application. Proton includes binary/hex editors which allows a user to inspect the raw data in the proton databases. By comparing the raw data in the .dbs files with values presented by the Proton application, it is possible for a user to deduce the physical structure and schema of Proton.
 
 You can inspect (and edit) the live Proton database files using the data editor built in to Proton. Editing the live data files is almost certain to damage the system. It is easier and safer to use a free binary/hex text editor such as HxD on read-only copies of the live Proton databases.
 
@@ -120,13 +125,13 @@ The item describes the data type (test, integer, code etc.) display length, the 
 
 ## Screen
 
-The Proton screen is an 80 x 18 character area for displaying data for the selected entity.
+The Proton screen is an 80 x 18 character area for displaying data for the selected entity and screen (view).
 
 The screen consists of a number of fixed captions and place-holders for stored data. The coordinates of the captions and place-holders, the text of the captions and the Ids for the items defining what is displayed in the place-holders is stored in metadata (SCRTEXT.DBS and SCREEN.DBS).
 
 ## Data type
 
-Each attribute/item has a DataTypeId as a byte 1-12. This identifys the data type for the item. These include unsigned or signed integers in 8,16 or 32 bit lengths, Fixed and variable-length free text stored as 8-bit ASCII to maximum of 128 characters, IEEE floating point numbers in 32 and 64 bit lengths, coded lists stored as 16 and 32-bit unsigned integer Ids, entity keys stored as variable-length strings of 8-bit ASCII characters to maximum length of 128 characters and long text (memo) stored as 8-bit ASCII which cannot be indexed but can be any length.
+Each attribute/item has a DataTypeId as a byte 1-12. This identifies the data type for the item. These include unsigned or signed integers in 8,16 or 32 bit lengths, Fixed and variable-length free text stored as 8-bit ASCII to maximum of 128 characters, IEEE floating point numbers in 32 and 64 bit lengths, coded lists stored as 16 and 32-bit unsigned integer Ids, entity keys stored as variable-length strings of 8-bit ASCII characters to maximum length of 128 characters and long text (memo) stored as 8-bit ASCII which cannot be indexed but can be any length.
 
 ## Static data
 
@@ -162,7 +167,7 @@ A Proton record is a contiguous sequence of bytes within a database. The record 
 
 ## Record ID
 
-A proton record has an ID which is a 32-bit integer evaluating to the ordinal position of the page/record within the Proton database. The ID is 1-based, (the first record has ID=1)
+A proton record has an ID which is a 32-bit integer. This ID is not stored but implied as the ordinal position of the page/record within the Proton database. The ID is 1-based, (the first record has ID=1)
 
 The ID can be used to find the start of the record rapidly by advancing the file pointer to byte position (ID -1)\*page length in bytes.
 
@@ -353,8 +358,7 @@ Pitfalls:
 
 1. Exclude terminating empty bytes &00.
 2. Replace the &00 characters inside text with &0A (line break).
-3. Count the lines. If less than the UINT8 in Byte 7 (total number of lines) then append enough extra line breaks so that you have the correct number of lines.
-4. The text will be formatted for a limited hardware VDU and may have too many line breaks for a modern display.
+3. The text will be formatted for a limited hardware VDU 80 characters wide. In a modern display the lines will appear strangely short.
 
 Bytes 0-3: UINT32: Number of the next page in chain
 
@@ -388,9 +392,9 @@ Pitfall:
 
 1. There is an algorithm embedded in Proton to confuse anyone trying to use the index.
 
-You need the length of the key in order to iterate through the keys (there are no stored delimiters, key length or explicit key Ids). The length of the key appears to be stored in IDXDEF.DBS. But this length is wrong. You need the following algorithm to get the correct key length from the key length in idxdef.dbs (keylen).
+You need the length of the key in order to iterate through the keys (there are no stored delimiters, key length or explicit key Ids). The length of the key is stored in IDXDEF.DBS. But this length is wrong. You need the following algorithm to get the correct key length from the key length in idxdef.dbs (keylen).
 
-Block length = 4 \* ((KeyLen + 11) \\ 4
+Block length = 4 \* ((KeyLength + 11) \\ 4
 
 An index consists of a sorted list of strings used as keys to entity instance (e.g. patient name, hospital number)
 
@@ -693,3 +697,6 @@ To find the value of as specified item (e.g. date of birth) for a specified pati
 2. Access the record with the same entity instance ID in VRX.DBS.
 3. Iterate and evaluate the first 2 bytes as UINT16 (Max item ID) in each block on the VRX.DBS page until max Item ID is >= the specified item.
 4. Read the page ID from bytes 4-7 (the last 4 bytes) in the block evaluated as UINT32 (page pointer).
+5. Access the page in DATA.DBS with the page ID read from VRX.DBS.
+6. Iterate and evaluate each data block on the DATA.DBS page until the item ID (bytes 0-1 of the block) matches the specified item. continue to the next page in chain if required.
+7. Read the data value from the data block (bytes 3 to (end of block or end of block-1 if bit 1 of block set) and interpret according to datatype defined in ITEM.DBS.
