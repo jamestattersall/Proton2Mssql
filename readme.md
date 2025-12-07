@@ -9,15 +9,16 @@ Execute the protonConsole2.exe app from a command prompt. Include an arbitary co
 The settings interface will be shown anyway if there are missing or invalid settings in appsettings.json.
 
 The proton database consists of several files all with the file extension .dbs and located in the same directory on the Proton unix server.
-These files should be copied onto a Windows server, accessible to this app or onto the same machine as the app..
+These files should be copied into the same direcory on a Windows server, accessible to this app or, ideally,  onto the same machine as the app..
 The files include base.dbs, entity.dbs, data.dbs, item.dbs. dict.dbs, code.dbs, screen.dbs, scrtext.dbs, index.dbs, indexdef.dbs, trgroup.dbs.
+.
 
 The app presents a console with options to set the settings required to create the SQL connection string and the path to the Proton .dbs files.
 The settings are stored in the application root/appsettings.json. Integrated security is used for SQL connection to avoid storing passwords in the app. 
 
 When the settings have been entered, the option load/update metadata creates the SQL database and populates the SQL tables with the metadata required to interpret the proton data. This metadata includes screen layouts, field names, captions, menu structures, encrypted passwords etc.
 
-When the metadata has been loaded, the option to load/import data will copy all of the data held on Proton into the SQL tabloes. This data includes, free text, associated entities (e.g. GPs, staff, dialysers, locations etc) as well as all patient data.
+When the metadata has been loaded, the option to load/import data will copy all of the data held on Proton into the SQL tables. This data includes, free text, associated entities (e.g. GPs, staff, dialysers, locations etc) as well as all patient data.
 
 # SQL data structure
 
@@ -71,6 +72,8 @@ ViewValuesCrosstab(@entityId INT, @tableId INT, @startRow INT, @rows INT)
 
 
 # Proton database file structure
+Proton is a clinical information system developed by CCL in the 1970s for use on minicomputers running the Unix operating system. Proton has been used extensively in the UK National Health Service (NHS) since the early 1980s, particularly in renal medicine. Proton systems are used to manage clinical data for dialysis patients, including laboratory results, clinical notes, prescriptions, dialysis session records etc. Proton is still widely used in the NHS and other healthcare systems worldwide.
+In Proton, patient data is stored in a custom database format designed specifically for healthcare data. Proton impliments features which make is especially suitable for healthcare data, including efficient storage of sparsely-populated data fields, easy addition of new data fields and flexible configuration to meet the needs of different clinical departments. Configuration can be changed without breaking existing data. Healthcare IT systems in current use tend to use relational databases which larley lack these advantages.
 
 The Proton database schema is largely compatible with the EAV format (Entity Attribute Values). Patient data is stored in just two ‘value tables’ (data.dbs, frtext.dbs). Supporting 'metadata tables' are required to define how the stored binary data is interpreted, accessed and displayed on screen (item.dbs, screen.dbs, trgroup.dbs menu.dbs etc.). The technical advantage of the EAV structure is that few 'tables' are required and healthcare data (which requires a large number of sparsely-populated fields) is stored efficiently. From the user's point of view, the EAV structure works well because it is easy to add and edit fields, entities, views etc. to accommodate changing clinical practice.
 
