@@ -1,22 +1,10 @@
-﻿using Microsoft.Data.SqlClient;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Metadata.Internal;
-using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.Linq;
-using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace ProtonConsole2.protonToSql
+﻿namespace ProtonConsole2.protonToSql
 {
     internal static class Sql
     {
         const string stagingPrefix = "staging_";
 
-        private static string equalSet(string[] keyColumnNames)
+        private static string EqualSet(string[] keyColumnNames)
         {
             List<string> res = [];
             foreach (string val in keyColumnNames)
@@ -26,7 +14,7 @@ namespace ProtonConsole2.protonToSql
             return string.Join(" AND ", res);
         }
 
-        private static string updateSet(string[] nonKeyColumnNames)
+        private static string UpdateSet(string[] nonKeyColumnNames)
         {
             List<string> res = [];
             foreach (string val in nonKeyColumnNames)
@@ -36,7 +24,7 @@ namespace ProtonConsole2.protonToSql
             return string.Join(", ", res);
         }
 
-        private static string nonEqualSet(string[] nonKeyColumnNames)
+        private static string NonEqualSet(string[] nonKeyColumnNames)
         {
 
             List<string> res = [];
@@ -49,11 +37,11 @@ namespace ProtonConsole2.protonToSql
 
         public static string StagingTableName(string tableName) => $@"{stagingPrefix}{tableName}";
 
-        public static string sqlValuesDeleteFromStaging(string tableName, string[] keyColumnNames)
+        public static string SqlValuesDeleteFromStaging(string tableName, string[] keyColumnNames)
         {
 
             var stagingTableName = StagingTableName(tableName);
-            var joinStr = equalSet(keyColumnNames);
+            var joinStr = EqualSet(keyColumnNames);
 
             return $@"
 DELETE {tableName}
@@ -63,11 +51,11 @@ WHERE s.EntityId is null
 AND t.EntityId IN (SELECT EntityId FROM {stagingTableName} GROUP BY EntityId)";
         }
 
-        public static string sqlMetadataDeleteFromStaging(string tableName, string[] keyColumnNames)
+        public static string SqlMetadataDeleteFromStaging(string tableName, string[] keyColumnNames)
         {
             var stagingTableName = StagingTableName(tableName);
 
-            var joinStr = equalSet(keyColumnNames);
+            var joinStr = EqualSet(keyColumnNames);
 
             return $@"
 DELETE {tableName}
@@ -78,7 +66,7 @@ WHERE s.{keyColumnNames[0]} is null";
         }
 
 
-        public static string sqlCreateStagingTable(string tableName)
+        public static string SqlCreateStagingTable(string tableName)
         {
             var stagingTableName = StagingTableName(tableName);
 
@@ -91,23 +79,22 @@ INTO [{stagingTableName}]
 FROM [{tableName}]";
         }
 
-        public static string sqlCreateStagingPrimaryKey(string tableName, string[] keyColumnNames)
+        public static string SqlCreateStagingPrimaryKey(string tableName, string[] keyColumnNames)
         {
             var stagingTableName = StagingTableName(tableName);
 
             return $@"
 IF OBJECT_ID(N'PK_staging_{tableName}')IS NULL
-ALTER TABLE [{stagingTableName}]
-   ADD CONSTRAINT PK_staging_{tableName} PRIMARY KEY CLUSTERED ({string.Join(", ", keyColumnNames)})";
+ALTER TABLE [{stagingTableName}] ADD CONSTRAINT PK_staging_{tableName} PRIMARY KEY CLUSTERED ({string.Join(", ", keyColumnNames)})";
 
         }
 
-        public static string sqlUpsert(string tableName, string[] keyColumnNames, string[] nonKeyColumnNames)
+        public static string SqlUpsert(string tableName, string[] keyColumnNames, string[] nonKeyColumnNames)
         {
             var stagingTableName = StagingTableName(tableName);
-            var joinStr = equalSet(keyColumnNames);
-            var strNonEqual = nonEqualSet(nonKeyColumnNames);
-            var updateStr = updateSet(nonKeyColumnNames);
+            var joinStr = EqualSet(keyColumnNames);
+            var strNonEqual = NonEqualSet(nonKeyColumnNames);
+            var updateStr = UpdateSet(nonKeyColumnNames);
 
 
             return $@"
@@ -125,7 +112,7 @@ WHERE t.{keyColumnNames[0]} is null";
 
         }
 
-        public static string sqlDeleteStagingTable(string tableName)
+        public static string SqlDeleteStagingTable(string tableName)
         {
             var stagingTableName = StagingTableName(tableName);
 
@@ -134,7 +121,7 @@ IF OBJECT_ID('{stagingTableName}') IS NOT NULL
 DROP TABLE [{stagingTableName}]";
         }
 
-        public static string sqlTruncateStagingTable(string tableName)
+        public static string SqlTruncateStagingTable(string tableName)
         {
             var stagingTableName = StagingTableName(tableName);
 
@@ -143,7 +130,7 @@ TRUNCATE TABLE [{stagingTableName}]
 ";
         }
 
-        public static string sqlTruncateTable(string tablename)
+        public static string SqlTruncateTable(string tablename)
         {
             return $@"
 TRUNCATE TABLE [{tablename}]
@@ -155,7 +142,7 @@ TRUNCATE TABLE [{tablename}]
             return $"EXEC sp_msforeachtable 'ALTER TABLE ? NOCHECK CONSTRAINT ALL'";
         }
 
-        public static string sqlMaxEntityId(string tablename)
+        public static string SqlMaxEntityId(string tablename)
         {
             return $"SELECT MAX(EntityId) FROM {tablename}";
         }

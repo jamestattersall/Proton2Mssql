@@ -221,7 +221,8 @@ namespace ProtonConsole2.Proton
                         TableId = tableId,
                         DisplayLength = itm.DisplayLength,
                         Name = itm.Name,
-                        Comment = itm.Comment
+                        Comment = itm.Comment,
+                        DateAttributeId=itm.DateItemId
                     };
                     switch (itm.DataType)
                     {

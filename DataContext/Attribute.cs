@@ -30,6 +30,7 @@ public class Attribute
     public float? Max { get; set; }
     public float? Min { get; set; }
     public short? LookupTypeId { get; set; }
+    public short? DateAttributeId { get; set; }
 
     public virtual  EntityType? EntityType { get; set; }
 

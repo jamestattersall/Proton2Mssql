@@ -20,7 +20,7 @@ namespace ProtonConsole2.Utilities
         public static bool GetBoolResponse(string caption, bool defaultValue) 
         {
             string? retn = GetStringResponse(caption + " Y/N?", defaultValue ? "Y":"N");
-            if (!retn.IsNullOrEmpty())
+            if (!string.IsNullOrEmpty(retn))
             {
                 if  (retn!.ToUpper().StartsWith("Y", StringComparison.CurrentCultureIgnoreCase)) return true;
                 if (retn.ToUpper().StartsWith("N", StringComparison.CurrentCultureIgnoreCase)) return false;
@@ -30,7 +30,7 @@ namespace ProtonConsole2.Utilities
         public static int? GetIntResponse(string caption, int defaultValue = 0)
         {
             string? retn = GetStringResponse(caption, defaultValue.ToString());
-            if (!retn.IsNullOrEmpty())
+            if (!string.IsNullOrEmpty(retn))
             {
                 if (int.TryParse(retn, out int op))
                 {
@@ -133,15 +133,10 @@ namespace ProtonConsole2.Utilities
 
                     if (appsettings.IsValid())
                     {
-                        Log.Logger = new LoggerConfiguration()
-                            .MinimumLevel.Debug()
-                            .WriteTo.Console()
-                            .WriteTo.File(Path.Combine(ConfigurationManager.AppSettings.PathToLogs ,"AppLog.txt"), rollingInterval: RollingInterval.Day)
-                            .CreateLogger();
+                        Log.Information("Connecting to SQL Server {Server} and database {DBname} using {cnn}", appsettings.Server, appsettings.DBname, appsettings.SQLConnectionString());
 
                         MetadataLoader.LoadMetadata();
                         EntityLoader.LoadLookups(1000);
-                        // ProtonToSql.SqlLoader.LoadIndexes();
                     }
                     break;
 
@@ -149,30 +144,22 @@ namespace ProtonConsole2.Utilities
                 case 11:
                     if (appsettings.IsValid())
                     {
-                        Log.Logger = new LoggerConfiguration()
-                            .MinimumLevel.Debug()
-                            .WriteTo.Console()
-                            .WriteTo.File(Path.Combine(ConfigurationManager.AppSettings.PathToLogs , "AppLog.txt"), rollingInterval: RollingInterval.Day)
-                            .CreateLogger();
+                        Log.Information("Connecting to SQL Server {Server} and database {DBname} using {cnn}", appsettings.Server, appsettings.DBname, appsettings.SQLConnectionString());
 
                         using ValuesLoader dsl = new();
                         dsl.LoadValues(1000);
-                        EntityLoader.LoadIndexes(1000);
-                        EntityLoader.LoadEntities(1000);
-                        EntityLoader.UpdateEntityNames();
+                        if (dsl.EntitiesLoaded > 0 || dsl.EntitiesUpdated > 0)
+                        {
+                            EntityLoader.LoadIndexes(1000);
+                            EntityLoader.LoadEntities(1000);
+                            EntityLoader.UpdateEntityNames();
+                        }
                     }
                     break;
 
                 case 12:
                     if (appsettings.IsValid())
                     {
-                        //ProtonToSql.SqlLoader.LoadEntityInstances(200);
-                        Log.Logger = new LoggerConfiguration()
-                            .MinimumLevel.Debug()
-                            .WriteTo.Console()
-                            .WriteTo.File(Path.Combine(ConfigurationManager.AppSettings.PathToLogs , "AppLog.txt"), rollingInterval: RollingInterval.Day)
-                            .CreateLogger();
-
                         EntityLoader.LoadIndexes(1000);
                         EntityLoader.LoadEntities(1000);
                         EntityLoader.UpdateEntityNames();

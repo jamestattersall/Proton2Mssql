@@ -2,7 +2,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Conventions;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
-using Microsoft.Identity.Client;
 using ProtonConsole2.DataContext;
 using Serilog;
 using System.Collections.Generic;
@@ -45,10 +44,10 @@ namespace ProtonConsole2.protonToSql
     internal abstract class TableUtilities<T> : IDisposable, IValueTableUtilities where T : class 
     {
         protected static readonly string tableName;
-        protected static readonly string sqlCreateStagingTable;
-        protected static readonly string sqlDeleteStagingTable;
+        protected static readonly string SqlCreateStagingTable;
+        protected static readonly string SqlDeleteStagingTable;
         protected static readonly string sqlCreatePk;
-        protected static readonly string sqlUpsert;
+        protected static readonly string SqlUpsert;
         protected static  string? sqlSyncFromStaging;
         protected static PropertyInfo[] propertyInfos;
         protected static List<string> nonKeyColumnNames = [];
@@ -124,10 +123,10 @@ namespace ProtonConsole2.protonToSql
                 emptyDataTable.Columns.Add(new DataColumn(pi.Name, Nullable.GetUnderlyingType(pi.PropertyType) ?? pi.PropertyType));
             }
 
-            sqlCreateStagingTable = Sql.sqlCreateStagingTable(tableName);
-            sqlCreatePk = Sql.sqlCreateStagingPrimaryKey(tableName, [.. keyColumnNames]);
-            sqlUpsert = Sql.sqlUpsert(tableName, [.. keyColumnNames], [.. nonKeyColumnNames]);
-            sqlDeleteStagingTable = Sql.sqlDeleteStagingTable(tableName);
+            SqlCreateStagingTable = Sql.SqlCreateStagingTable(tableName);
+            sqlCreatePk = Sql.SqlCreateStagingPrimaryKey(tableName, [.. keyColumnNames]);
+            SqlUpsert = Sql.SqlUpsert(tableName, [.. keyColumnNames], [.. nonKeyColumnNames]);
+            SqlDeleteStagingTable = Sql.SqlDeleteStagingTable(tableName);
         }
 
         public TableUtilities()
@@ -138,7 +137,7 @@ namespace ProtonConsole2.protonToSql
 
             dtReading = emptyDataTable.Clone();
             NeedsStagingTable = true;
-            cdCreateStagingTable = new SqlCommand(Sql.sqlCreateStagingTable(tableName), cnn)
+            cdCreateStagingTable = new SqlCommand(Sql.SqlCreateStagingTable(tableName), cnn)
             {
                 CommandTimeout = 500
             };
@@ -228,8 +227,8 @@ namespace ProtonConsole2.protonToSql
                 catch (Exception ex)
                 {
                     Log.Error(ex, @$"Unable to sync {stagingTableName}
-{sqlSyncFromStaging}
-");
+                        {sqlSyncFromStaging}
+                    ");
                 }
             }
         }
@@ -252,13 +251,13 @@ namespace ProtonConsole2.protonToSql
 
         static ValueTableUtilities()
         {
-            string sqlDeleteFromStaging = Sql.sqlValuesDeleteFromStaging(tableName, [.. keyColumnNames]); ;
+            string sqlDeleteFromStaging = Sql.SqlValuesDeleteFromStaging(tableName, [.. keyColumnNames]); ;
 
             StringBuilder sb = new();
             sb.AppendLine(sqlCreatePk);
             sb.AppendLine(sqlDeleteFromStaging);
-            sb.AppendLine(sqlUpsert);
-            sb.AppendLine(sqlDeleteStagingTable);
+            sb.AppendLine(SqlUpsert);
+            sb.AppendLine(SqlDeleteStagingTable);
             sqlSyncFromStaging = sb.ToString();
         }
 
@@ -266,7 +265,7 @@ namespace ProtonConsole2.protonToSql
         {
             SwitchTables();
 
-            cdMaxEntityId = new SqlCommand(Sql.sqlMaxEntityId(tableName), cnn)
+            cdMaxEntityId = new SqlCommand(Sql.SqlMaxEntityId(tableName), cnn)
             {
                 CommandTimeout = 500
             };
@@ -284,13 +283,13 @@ namespace ProtonConsole2.protonToSql
 
         static MetaTableUtilities()
         {
-            string sqlDeleteFromStaging = Sql.sqlMetadataDeleteFromStaging(tableName, [.. keyColumnNames]);
+            string sqlDeleteFromStaging = Sql.SqlMetadataDeleteFromStaging(tableName, [.. keyColumnNames]);
 
             StringBuilder sb = new();
             sb.AppendLine(sqlCreatePk);
             sb.AppendLine(sqlDeleteFromStaging);
-            sb.AppendLine(sqlUpsert);
-            sb.AppendLine(sqlDeleteStagingTable);
+            sb.AppendLine(SqlUpsert);
+            sb.AppendLine(SqlDeleteStagingTable);
             sqlSyncFromStaging = sb.ToString();
 
         }
@@ -298,7 +297,7 @@ namespace ProtonConsole2.protonToSql
         public MetaTableUtilities()
         {
             dtWriting = dtReading; //disable async
-            cdTruncateTable = new SqlCommand(Sql.sqlTruncateTable(tableName), cnn)
+            cdTruncateTable = new SqlCommand(Sql.SqlTruncateTable(tableName), cnn)
             {
                 CommandTimeout = 500
             };

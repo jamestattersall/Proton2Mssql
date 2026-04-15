@@ -123,7 +123,7 @@ This identifier can be stored in a record of another entity instance as an entit
 
 Entities can be linked together (e.g. a patient's GP) by storing the entity key for one entity instance (e.g. a specific GP) in the record of another entity instance (e.g. a specific patient).
 
-An entity also has a default ID line.
+An entity also has a default ID line..
 
 ## Item
 
@@ -293,15 +293,15 @@ Page chains allowed:yes
 
 The EAV Values table. Stores all of the entity property values apart from long text. The actual data values are stored in a series of data blocks.
 
-All data for an entity instance is stored within a single page chain, in ascending order of item ID. The page at the start of the chain for a specified entity instance is defined in VRX.DBS. The specified entity instance ID is the ID VRX.DBS page/record ID. VRX also includes pointers to the first page containing specified items. Use VRX to find the first page/record in data.dbs likely to include the item value required. Then iterate and evaluate data blocks one by one until the required item is found.
+All data for an entity instance is stored within a single page chain, in ascending order of item ID. The page at the start of the chain for a specified entity instance and attribute/item is defined in VRX.DBS. The specified entity instance ID is the ID VRX.DBS page/record ID. VRX also includes pointers to the first page containing specified items. Use VRX to find the first page/record in data.dbs likely to include the item value required. Then iterate and evaluate data blocks one by one until the required item is found.
 
 It is possible to find the start of the chain without VRX.DBS by iteratively reading records in DATA.DBS until a record containing the desired entity instance ID is found at location page offset 8, then following the chain backwards until the root record is found. This is expensive on processing time. Proton uses this method to rebuild VRX.DBS if it gets corrupted.
 
 Pitfalls:
 
-1. Bytes in data blocks evaluating to numeric or ID may be truncated at the least significant (right) end. This is to save space by not storing trailing zeros. A small integer stored as a float would have a lot of trailing zeros in IEEE 754 coding. To evaluate bytes as numbers, you need to right pad the stored byte series by adding zeros to the required length for the datatype (defined in item.dbs). The redundant most-significant leading zeros in integers and IDs are not removed.
+1. Bytes in data blocks evaluating to numeric or ID may be truncated at the rightmost end (least signifcant on big-endian systems). This is to save space by not storing trailing zeros. A small integer stored as a float would have a lot of trailing zeros in IEEE 754 coding. To evaluate bytes as numbers, you need to right pad the stored byte series by adding zeros to the required length for the datatype (defined in item.dbs). The redundant most-significant leading zeros in integers and IDs are not removed.
 2. FLOAT64 numbers may be composite and include appended bytes to be evaluated as READ codes. These appended bytes are subject to least significant truncation of zeros so you cannot rely on specific values for block length to detect appended READ code Ids. FLOAT64 blocks longer than 11 bytes for non-repeating block or 12 bytes for repeating blocks will include appended codes. See spec for Composite FLOAT64
-3. TIME values may be codes evaluating to “PRE”, “POST” or “0000”. See spec for TIME datatype.
+3. TIME values may be codes evaluating to “PRE”, “POST”, “0000” or an integer evaluating to number of milliseconds since midnight. See spec for TIME datatype.
 4. Time-related data values must be linked to the correct row and key date. This linkage is via a row ID which is not stored explicitly. Row ID is the ordinal position of the value relative to the first value for the item. Values are stored in descending order of row ID. Key dates are stored in descending date order. Data blocks have varying length so there is no way to deduce the row ID without evaluating and counting each block in series. All empty and repeating values must be counted. The count must be continued over page boundaries.
 
 Bytes 0-3: UINT32: Next page ID: the page next in chain
@@ -346,7 +346,7 @@ Bytes 0-63: StringVar: Code display text (e.g. “Main hospital”)
 
 ## ENTITY.DBS
 
-Entity type/class (e.g. Patient, GP)
+Entity type/class (e.g. Patient, GP, location, drug)
 
 Page chains allowed:no
 
@@ -380,7 +380,7 @@ The definitions/configuration of the built-in entity index INDEX.DBS
 
 Allow page chain: no
 
-Bytes 0-1: UINT16: Key length: The length in bytes of the key (NEEDS TO BE CORRECTED USING ALGORITHM).
+Bytes 0-1: UINT16: Key length: The length in bytes of the key (NEEDS TO BE INTERPRETED USING ALGORITHM).
 
 Byte 2: UINT8: partial match flag – if &01 match at start of search string, if &00 match entire string.
 
@@ -398,9 +398,9 @@ Allow page chain: yes
 
 Pitfall:
 
-1. There is an algorithm embedded in Proton to confuse anyone trying to use the index.
+1. There is an algorithm embedded in Proton which is required to read the index. This was required for compatibility with various systems.
 
-You need the length of the key in order to iterate through the keys (there are no stored delimiters, key length or explicit key Ids). The length of the key is stored in IDXDEF.DBS. But this length is wrong. You need the following algorithm to get the correct key length from the key length in idxdef.dbs (keylen).
+You need the length of the key in order to iterate through the keys (there are no stored delimiters, key length or explicit key Ids). You need the following algorithm to get the correct key length from IDXDEF.dbs, bytes 0-1 (KeyLength).
 
 Block length = 4 \* ((KeyLength + 11) \\ 4
 
@@ -540,7 +540,7 @@ Passwords, not particularly secure, but control start menu for users
 
 Allow page chain: no
 
-Bytes 0-11 : StringVar password encrypted (character code XOR 31 to decrypt).
+Bytes 0-11 : StringVar password encrypted (character code XOR 31 to decrypt/encrypt).
 
 Bytes 12-13: UINT16: function (0=menu, 83=display screen, 82=run quark)
 
@@ -552,11 +552,12 @@ Bytes 18-19: UINT16: entity ID
 
 Bytes 20-21: UINT16: ID line (screen number of entity banner)
 
-Bytes 22-26: StringVar: USER NAME
+Bytes 22-26: StringVar: USER NAME 
 
 ## PATSTS.DBS
 
 The entity (object) instances
+The ID/page number is a 1:1 link to ID/page in VRX.DBS.
 
 Allow page chain: no
 
@@ -593,7 +594,7 @@ Byte x+4: the start of the next block
 
 ## SCRTXT.DBS
 
-The any fixed text (captions, titles) to be displayed on screen.
+Any fixed text (captions, titles) to be displayed on screen.
 
 Allow page chain: no
 
@@ -617,7 +618,7 @@ next occurrence of Byte &05: the start of the next block
 
 ## VALID.DBS
 
-The input validation for attributes/items. The ID/page number links to page in ITEM.DBS.
+The input validation for attributes/items. The ID/page number is a 1:1 link to ID/page in ITEM.DBS.
 
 Allow page chain: no
 
@@ -651,7 +652,7 @@ Bytes 12-13: UINT16: Qualifier code type
 
 Bytes 16-17: UINT16: Modifier code type
 
-Datatype=5:
+Datatype=6:
 
 Bytes 40-33: FLOAT64: minimum allowable value,
 
@@ -676,6 +677,7 @@ Bytes 32-33: UINT16: The CODE TYPE
 ## VRX.DBS
 
 The main index for locating values within data.dbs for a specified entity instance (e.g. patient).
+The ID/page number is a 1:1 link to ID/page in PATSTS.DBS.
 
 Allow page chains: no
 

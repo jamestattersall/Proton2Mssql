@@ -46,12 +46,12 @@ namespace ProtonConsole2.Utilities
                 //string json = Protection.Decrypt(enc);
                 AppSettings? asst  = System.Text.Json.JsonSerializer.Deserialize<AppSettings>(json);
                 if (asst != null ) {AppSettings = asst;}
-                if (!AppSettings.PathToProtonFolder.IsNullOrEmpty())
+                if (!string.IsNullOrEmpty(AppSettings.PathToProtonFolder))
                 {
                     if (File.Exists(Path.Combine(AppSettings.PathToProtonFolder, "BASE.dbs")))
                     {
 
-                    ProtonBase.SetProtonBase(AppSettings.PathToProtonFolder);
+                        ProtonBase.SetProtonBase(AppSettings.PathToProtonFolder);
                     }
                 }
 
@@ -64,7 +64,7 @@ namespace ProtonConsole2.Utilities
         public static void SetUserPassword()
         {
             string? pwd = Questioner.GetStringResponse("Enter password");
-            if (!pwd.IsNullOrEmpty())
+            if (!string.IsNullOrEmpty(pwd))
             {
                 AppSettings.UserPassword = pwd!;
                 SaveSettings();
@@ -78,7 +78,7 @@ namespace ProtonConsole2.Utilities
             {
 
                 string? dbn = Questioner.GetStringResponse("Enter DB name", AppSettings.DBname);
-                if (!dbn.IsNullOrEmpty())
+                if (!string.IsNullOrEmpty(dbn))
                 {
                     AppSettings.DBname = dbn!;
                     SaveSettings();
@@ -101,7 +101,7 @@ namespace ProtonConsole2.Utilities
             int trycount = 0; ;
             while (trycount<4) { 
                 string? path = Questioner.GetStringResponse("Enter Proton dbs files directory path:", AppSettings.PathToProtonFolder);
-                if (path.IsNullOrEmpty())
+                if (string.IsNullOrEmpty(path))
                 {
                     var toExit = Questioner.GetBoolResponse("Continue without saving?", false);
                     if (toExit)
@@ -120,11 +120,11 @@ namespace ProtonConsole2.Utilities
                             trycount = 10; ;
                             ProtonBase.SetProtonBase(AppSettings.PathToProtonFolder);
 
-                        } else Console.WriteLine("Directory does not contain base.dbs file.");
+                        } else Log.Error("Directory does not contain base.dbs file.");
                     }
                     else
                     {
-                        Console.WriteLine("Directory not found");
+                        Log.Error("Directory not found");
                     }
                 }
                 trycount++;
@@ -178,7 +178,7 @@ namespace ProtonConsole2.Utilities
             while (trycount < 4)
             {
                 string? path = Questioner.GetStringResponse("Enter directory to store log files: ", AppSettings.PathToLogs);
-                if (path.IsNullOrEmpty())
+                if (string.IsNullOrEmpty(path))
                 {
                     var toExit = Questioner.GetBoolResponse("Continue without saving?", false);
                     if (toExit)
@@ -216,7 +216,7 @@ namespace ProtonConsole2.Utilities
             int trycount = 0; ;
             while (trycount < 4) { 
                 var sa = Questioner.GetStringResponse("Enter SQL server address", AppSettings.Server);
-                if (!sa.IsNullOrEmpty())
+                if (!string.IsNullOrEmpty(sa))
                 {
                     AppSettings.Server = sa!;
                     SaveSettings();
@@ -243,7 +243,7 @@ namespace ProtonConsole2.Utilities
             while (trycount < 4)
             {
                 string? pwd = Questioner.GetStringResponse("Enter DB password", AppSettings.DBPassword);
-                if (!pwd.IsNullOrEmpty())
+                if (!string.IsNullOrEmpty(pwd))
                 {
                     SaveSettings();
                     trycount = 10;
@@ -358,18 +358,34 @@ namespace ProtonConsole2.Utilities
             }
             catch (SqlException ex)
             {
-                Console.WriteLine("unable to connect to server using:" + ConfigurationManager.AppSettings.SQLConnectionString(true) + " " + ex.Message);
+                Log.Error($"unable to connect to server using: {SQLConnectionString(defaultDb)}. Exception: {ex.Message}");
+                //Console.WriteLine("unable to connect to server using:" + ConfigurationManager.AppSettings.SQLConnectionString(true) + " " + ex.Message);
                 return false;
             }
             
         }
         public bool TestPathToProton()
         {
-            return (File.Exists(Path.Combine(PathToProtonFolder , "BASE.dbs")));
+            if (File.Exists(Path.Combine(PathToProtonFolder , "BASE.dbs")))
+            {
+                return true;
+            }
+            else
+            {
+                Log.Error($"Proton dbs files not found in specified directory: ({PathToProtonFolder}).");
+                return false;
+            }
         }
         public bool TestPathToLogs()
         {
-            return (Path.Exists(PathToLogs ));
+            if (Path.Exists(PathToLogs))
+            {
+                return true;
+            }
+            else { 
+                Log.Error($"Log files directory not found: ({PathToLogs}).");
+                return false;
+            }
         }
 
         public bool IsValid()

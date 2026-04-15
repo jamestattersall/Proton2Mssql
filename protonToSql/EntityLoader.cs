@@ -27,7 +27,7 @@ namespace ProtonConsole2.protonToSql
             int c = 0;
             var prog = new Utilities.Progress(20);
         
-            Console.WriteLine("Loading Lookups..");
+            Log.Information("Loading Lookups..");
             
             prog.WriteProgressBar(0);
             var nDicts = dict.NPages;
@@ -89,9 +89,9 @@ namespace ProtonConsole2.protonToSql
             var prog = new Utilities.Progress(20);
             if (exists)
             {
-                Console.WriteLine("Updating Entities..");
+                Log.Information("Updating Entities..");
             }
-            else Console.WriteLine("Loading Entities..");
+            else Log.Information("Loading Entities..");
             prog.WriteProgressBar(0);
             var tPages = vrx.NPages;
             for (int i = 1; i <= tPages; i++)
@@ -146,7 +146,7 @@ namespace ProtonConsole2.protonToSql
             int tc = 0;
             int cc = 0;
 
-           Console.WriteLine("Deleting old indexes..");
+           Log.Information("Deleting old indexes..");
             tableUtilities.TruncateTable();
 
             for (int i = 1; i <= index.NPages; i++)
@@ -158,7 +158,7 @@ namespace ProtonConsole2.protonToSql
             }
 
 
-            Console.WriteLine("Loading indexes..");
+            Log.Information("Loading indexes..");
             prog.WriteProgressBar(0);
             for (short i = 1; i <= indexdef.NPages; i++)
             {

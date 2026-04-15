@@ -366,7 +366,7 @@ namespace ProtonConsole2.protonToSql
         {
             var key = ProtonDbFileReader.GetString(data);
             using IndexReader ih = new();
-            if (!key.IsNullOrEmpty())
+            if (! string.IsNullOrEmpty(key))
             {
                 dataRows.Add(valueIndex.EntityId, valueIndex.AttributeId, valueIndex.Seq, key);
 
@@ -532,7 +532,7 @@ namespace ProtonConsole2.protonToSql
             st.Stop();
             if (Utilities.ConfigurationManager.AppSettings.NoLoad)
             {
-                Console.WriteLine($"{nUpdated} entities scanned in {st.Elapsed:hh\\:mm\\:ss}");
+                Log.Information($"{nUpdated} entities scanned in {st.Elapsed:hh\\:mm\\:ss}");
             }
             else
             {

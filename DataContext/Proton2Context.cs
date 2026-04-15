@@ -10,7 +10,7 @@ public partial class Proton2Context : DbContext
     {
         try
         {
-            Database.EnsureCreated();
+             Database.EnsureCreated();
         }
         catch {
             Log.Warning("Unable to connect to database");
@@ -73,17 +73,16 @@ public partial class Proton2Context : DbContext
                   Utilities.ConfigurationManager.AppSettings.SQLConnectionString(false)
             )
             .UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
-        
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        Console.WriteLine("creating database");
 
         foreach (var relationship in modelBuilder.Model.GetEntityTypes().SelectMany(e => e.GetForeignKeys()))
         {
             relationship.DeleteBehavior = DeleteBehavior.Restrict;
         }
 
-      
+
         var valueDate = modelBuilder.Entity<ValueDate>();
         valueDate.Property(f => f.Value).HasColumnType(nameof(SqlDbType.Date));
 
